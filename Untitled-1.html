@@ -1,0 +1,2709 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechStore - Компьютерная техника & Периферия</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eff6ff',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Three.js & OrbitControls for Interactive 3D PC Builder -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+        }
+        .dark .glass {
+            background: rgba(15, 23, 42, 0.75);
+        }
+
+        /* --- WINTER EFFECTS --- */
+        .winter-active {
+            box-shadow: 0 0 25px rgba(59, 130, 246, 0.3);
+        }
+        .winter-garland {
+            background: linear-gradient(90deg, #3b82f6, #60a5fa, #93c5fd, #3b82f6);
+            background-size: 200% 200%;
+            animation: garlandGlow 3s ease infinite;
+        }
+        @keyframes garlandGlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* --- HALLOWEEN EFFECTS --- */
+        .halloween-active {
+            box-shadow: 0 0 25px rgba(249, 115, 22, 0.4);
+        }
+        .halloween-garland {
+            background: linear-gradient(90deg, #f97316, #a855f7, #eab308, #f97316);
+            background-size: 200% 200%;
+            animation: halloweenGlow 2.5s ease infinite;
+        }
+        @keyframes halloweenGlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .spooky-border {
+            border-color: rgba(249, 115, 22, 0.6) !important;
+        }
+        .spooky-card {
+            box-shadow: 0 10px 25px -5px rgba(168, 85, 247, 0.25), 0 8px 10px -6px rgba(249, 115, 22, 0.2);
+        }
+
+        /* --- PC BUILDER MINI-GAME EFFECTS --- */
+        @keyframes spinFan {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .fan-spin-idle {
+            animation: spinFan 3s linear infinite;
+        }
+        .fan-spin-turbo {
+            animation: spinFan 0.25s linear infinite;
+        }
+        @keyframes rgbCaseGlow {
+            0% { box-shadow: 0 0 25px rgba(59, 130, 246, 0.45), inset 0 0 20px rgba(59, 130, 246, 0.2); border-color: #3b82f6; }
+            33% { box-shadow: 0 0 25px rgba(168, 85, 247, 0.45), inset 0 0 20px rgba(168, 85, 247, 0.2); border-color: #a855f7; }
+            66% { box-shadow: 0 0 25px rgba(16, 185, 129, 0.45), inset 0 0 20px rgba(16, 185, 129, 0.2); border-color: #10b981; }
+            100% { box-shadow: 0 0 25px rgba(59, 130, 246, 0.45), inset 0 0 20px rgba(59, 130, 246, 0.2); border-color: #3b82f6; }
+        }
+        .rgb-case-active {
+            animation: rgbCaseGlow 3s linear infinite;
+        }
+
+        /* --- RESPONSIVE & TOUCH OPTIMIZATIONS --- */
+        html, body {
+            max-width: 100vw;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+        button, select, input, label {
+            touch-action: manipulation;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-gray-100 min-h-screen flex flex-col transition-colors duration-200 relative pb-16 md:pb-0">
+    <!-- Particle FX Canvas (Snow / Halloween) -->
+    <canvas id="fxCanvas" class="fixed inset-0 pointer-events-none z-30"></canvas>
+
+    <!-- HEADER -->
+    <header class="sticky top-0 z-40 glass border-b border-gray-200/60 dark:border-gray-800/80">
+        <!-- Festive Top Bar Glow -->
+        <div id="garlandBar" class="h-1 w-full hidden"></div>
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16 gap-2">
+                <!-- Logo & Brand (Opens About Modal) -->
+                <div class="flex items-center space-x-2 sm:space-x-3 cursor-pointer group shrink-0" onclick="toggleAboutModal(true)" title="О сайте">
+                    <div id="brandIcon" class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white font-bold text-lg sm:text-xl shadow-lg shadow-blue-500/30 transition-all duration-300 group-hover:scale-105">
+                        <i id="brandIconI" class="fa-solid font-bold fa-desktop"></i>
+                    </div>
+                    <span class="text-lg sm:text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">TechStore</span>
+                </div>
+
+                <!-- Navigation Links (Desktop) -->
+                <nav class="hidden md:flex space-x-6 text-sm font-medium">
+                    <button onclick="navigateTo('catalog')" class="hover:text-blue-500 transition-colors flex items-center space-x-2" data-i18n="nav_catalog">
+                        Каталог
+                    </button>
+                    <button onclick="navigateTo('builder')" class="hover:text-emerald-500 transition-colors flex items-center space-x-2 text-emerald-500 font-semibold">
+                        <i class="fa-solid fa-gamepad"></i> <span data-i18n="nav_builder">Сборка ПК</span>
+                    </button>
+                    <button onclick="navigateTo('admin')" class="hover:text-blue-500 transition-colors flex items-center space-x-2 text-indigo-500 font-semibold">
+                        <i class="fa-solid fa-sliders"></i> <span data-i18n="nav_admin">Управление</span>
+                    </button>
+                </nav>
+
+                <!-- Header Actions -->
+                <div class="flex items-center space-x-1 sm:space-x-3">
+                    <!-- Winter Toggle -->
+                    <button id="winterBtn" onclick="toggleWinterMode()" title="Зимний режим" class="p-2.5 text-gray-500 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400 rounded-lg focus:outline-none transition-transform active:scale-95">
+                        <i class="fa-solid fa-snowflake text-base sm:text-lg"></i>
+                    </button>
+
+                    <!-- Halloween Toggle -->
+                    <button id="halloweenBtn" onclick="toggleHalloweenMode()" title="Хэллоуин режим" class="p-2.5 text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-400 rounded-lg focus:outline-none transition-transform active:scale-95">
+                        <i class="fa-solid fa-ghost text-base sm:text-lg"></i>
+                    </button>
+
+                    <!-- Language Selector -->
+                    <select id="langSelect" onchange="changeLanguage(this.value)" class="bg-gray-100 dark:bg-slate-800 border border-gray-300 dark:border-gray-700 text-xs rounded-lg p-2 focus:ring-2 focus:ring-blue-500">
+                        <option value="ru">RU</option>
+                        <option value="en">EN</option>
+                        <option value="kz">KZ</option>
+                    </select>
+
+                    <!-- Dark Mode Toggle -->
+                    <button onclick="toggleTheme()" class="p-2.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white rounded-lg focus:outline-none active:scale-95">
+                        <i id="themeIcon" class="fa-solid fa-moon text-base sm:text-lg"></i>
+                    </button>
+
+                    <!-- Cart Button -->
+                    <button onclick="toggleCartModal(true)" class="relative p-2.5 text-gray-600 hover:text-blue-600 dark:text-gray-300 dark:hover:text-white active:scale-95">
+                        <i class="fa-solid fa-cart-shopping text-lg sm:text-xl"></i>
+                        <span id="cartCount" class="absolute top-0.5 right-0.5 bg-blue-600 text-white text-[10px] sm:text-xs font-bold rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center shadow-md">0</span>
+                    </button>
+
+                    <!-- Auth Button -->
+                    <div id="authArea" class="shrink-0">
+                        <!-- Populated dynamically by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MOBILE BOTTOM NAVIGATION BAR (Phones & Tablets) -->
+    <nav class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-t border-gray-200 dark:border-gray-800 flex justify-around items-center h-16 px-1 shadow-lg">
+        <button id="mobNavCatalog" onclick="navigateTo('catalog')" class="flex flex-col items-center justify-center w-full h-full text-blue-600 dark:text-blue-400 space-y-1 transition-colors">
+            <i class="fa-solid fa-store text-base"></i>
+            <span class="text-[10px] font-semibold" data-i18n="nav_catalog">Каталог</span>
+        </button>
+        <button id="mobNavBuilder" onclick="navigateTo('builder')" class="flex flex-col items-center justify-center w-full h-full text-gray-500 dark:text-gray-400 space-y-1 transition-colors">
+            <i class="fa-solid fa-gamepad text-base"></i>
+            <span class="text-[10px] font-semibold" data-i18n="nav_builder">Сборка ПК</span>
+        </button>
+        <button id="mobNavAdmin" onclick="navigateTo('admin')" class="flex flex-col items-center justify-center w-full h-full text-gray-500 dark:text-gray-400 space-y-1 transition-colors">
+            <i class="fa-solid fa-sliders text-base"></i>
+            <span class="text-[10px] font-semibold" data-i18n="nav_admin">Управление</span>
+        </button>
+        <button onclick="toggleCartModal(true)" class="flex flex-col items-center justify-center w-full h-full text-gray-500 dark:text-gray-400 space-y-1 transition-colors">
+            <i class="fa-solid fa-cart-shopping text-base"></i>
+            <span class="text-[10px] font-semibold" data-i18n="cart_title">Корзина</span>
+        </button>
+    </nav>
+
+    <!-- MAIN CONTENT CONTAINERS (Multi-page Simulation) -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- CATALOG PAGE -->
+        <section id="page-catalog" class="space-y-6">
+            <!-- Hero Banner -->
+            <div id="heroBanner" class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-8 sm:p-12 shadow-xl transition-all duration-500">
+                <div class="relative z-10 max-w-xl space-y-4">
+                    <span id="heroBadge" class="px-3 py-1 bg-white/20 backdrop-blur rounded-full text-xs font-semibold uppercase tracking-wider" data-i18n="hero_badge">ТОП ТЕХНИКА 2026</span>
+                    <h1 id="heroTitle" class="text-3xl sm:text-5xl font-extrabold tracking-tight" data-i18n="hero_title">Собери свой мощный ПК</h1>
+                    <p id="heroDesc" class="text-blue-100 text-sm sm:text-base" data-i18n="hero_desc">Лучшая периферия и оригинальные комплектующие с гарантией качества.</p>
+                </div>
+                <i id="heroIcon" class="fa-solid fa-microchip absolute right-4 -bottom-10 text-[200px] opacity-10 pointer-events-none transition-all duration-500"></i>
+            </div>
+
+            <!-- Filters and Search -->
+            <div class="flex flex-col md:flex-row gap-3 sm:gap-4 items-stretch md:items-center justify-between bg-white dark:bg-slate-800 p-3 sm:p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/50">
+                <!-- Category Buttons (Scrollable on Mobile) -->
+                <div class="flex overflow-x-auto no-scrollbar gap-2 w-full md:w-auto pb-1 md:pb-0" id="categoryFilters">
+                    <button onclick="setCategory('all')" class="cat-btn active shrink-0 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all bg-blue-600 text-white" data-i18n="cat_all">Все товары</button>
+                    <button onclick="setCategory('computers')" class="cat-btn shrink-0 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200" data-i18n="cat_pcs">Компьютеры</button>
+                    <button onclick="setCategory('peripherals')" class="cat-btn shrink-0 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200" data-i18n="cat_periph">Периферия</button>
+                    <button onclick="setCategory('components')" class="cat-btn shrink-0 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200" data-i18n="cat_comp">Комплектующие</button>
+                </div>
+
+                <!-- Search Input -->
+                <div class="relative w-full md:w-64">
+                    <input type="text" id="searchInput" oninput="renderCatalog()" placeholder="Поиск..." data-i18n-placeholder="search_placeholder" class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-gray-400"></i>
+                </div>
+            </div>
+
+            <!-- Products Grid -->
+            <div id="productsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <!-- Injected via JavaScript -->
+            </div>
+        </section>
+
+        <!-- PC BUILDER MINI-GAME PAGE -->
+        <section id="page-builder" class="hidden space-y-6">
+            <!-- Mini-Game Header Banner -->
+            <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 text-white p-6 sm:p-10 shadow-xl">
+                <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div class="space-y-2 max-w-xl">
+                        <span class="px-3 py-1 bg-white/20 backdrop-blur rounded-full text-xs font-semibold uppercase tracking-wider" data-i18n="builder_badge">ИНТЕРАКТИВНЫЙ СИМУЛЯТОР</span>
+                        <h2 class="text-2xl sm:text-4xl font-extrabold tracking-tight" data-i18n="builder_title">Собери ПК своей мечты</h2>
+                        <p class="text-emerald-100 text-xs sm:text-sm" data-i18n="builder_subtitle">Устанавливай детали в корпус, следи за сокетами и ваттами, запусти стресс-тест и получи промокод за крутую сборку!</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2 shrink-0">
+                        <button onclick="autoBuildPC()" class="px-4 py-2.5 bg-white text-emerald-700 hover:bg-emerald-50 rounded-xl text-xs sm:text-sm font-bold shadow-md flex items-center gap-2 transition-all">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> <span data-i18n="builder_auto">Автосборка</span>
+                        </button>
+                        <button onclick="resetPCBuild()" class="px-4 py-2.5 bg-slate-900/40 hover:bg-slate-900/60 text-white rounded-xl text-xs sm:text-sm font-semibold border border-white/20 flex items-center gap-2 transition-all">
+                            <i class="fa-solid fa-rotate-left"></i> <span data-i18n="builder_reset">Очистить</span>
+                        </button>
+                    </div>
+                </div>
+                <i class="fa-solid fa-computer absolute right-6 -bottom-8 text-[180px] opacity-10 pointer-events-none"></i>
+            </div>
+
+            <!-- Main Builder Workspace -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <!-- LEFT: Interactive 3D PC View, Color Customizer, Case Visualizer & Benchmarks -->
+                <div class="lg:col-span-5 space-y-5">
+                    <!-- Interactive 3D PC Viewport -->
+                    <div class="bg-slate-950 rounded-3xl border-2 border-slate-800 shadow-2xl overflow-hidden relative">
+                        <div class="absolute top-3 inset-x-4 z-10 flex items-center justify-between pointer-events-none">
+                            <span class="px-2.5 py-1 rounded-full bg-slate-900/80 backdrop-blur border border-slate-700 text-[11px] font-bold text-emerald-400 flex items-center gap-1.5">
+                                <i class="fa-solid fa-cube"></i> <span data-i18n="builder_3d_label">3D Вид ПК 360°</span>
+                            </span>
+                            <button onclick="reset3DCamera()" class="pointer-events-auto px-2.5 py-1 rounded-lg bg-slate-900/80 hover:bg-slate-800 text-slate-300 border border-slate-700 text-[11px] font-semibold transition-colors" title="Сбросить камеру">
+                                <i class="fa-solid fa-camera-rotate"></i>
+                            </button>
+                        </div>
+
+                        <div id="pc3dCanvasContainer" class="w-full h-[290px] sm:h-[330px] cursor-grab active:cursor-grabbing"></div>
+
+                        <div class="absolute bottom-3 inset-x-4 z-10 flex items-center justify-between text-[11px] text-slate-400 pointer-events-none">
+                            <span class="bg-slate-900/75 backdrop-blur px-2.5 py-1 rounded-lg border border-slate-800">
+                                <i class="fa-solid fa-hand-pointer mr-1 text-emerald-400"></i> <span data-i18n="builder_3d_hint">Вращайте и приближайте</span>
+                            </span>
+                            <span id="pc3dStateTag" class="bg-slate-900/75 backdrop-blur px-2.5 py-1 rounded-lg border border-slate-800 font-mono text-slate-300">STANDBY</span>
+                        </div>
+                    </div>
+
+                    <!-- 3D Case & RGB Color Customizer Panel -->
+                    <div class="bg-white dark:bg-slate-800 rounded-3xl p-4 sm:p-5 border border-gray-100 dark:border-gray-700/60 shadow-sm space-y-3.5">
+                        <!-- Case Chassis Color Selector -->
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <span class="text-xs font-bold flex items-center gap-1.5 text-gray-700 dark:text-gray-200">
+                                <i class="fa-solid fa-paint-roller text-blue-500"></i>
+                                <span data-i18n="builder_case_color">Цвет корпуса:</span>
+                                <span id="activeCaseColorLabel" class="text-blue-500 font-semibold">Чёрный</span>
+                            </span>
+                            <div class="flex items-center gap-2" id="caseColorSwatches">
+                                <button onclick="setPCCaseColor('black')" data-color="black" title="Чёрный" class="w-6 h-6 rounded-full bg-slate-900 border-2 border-gray-400 transition-transform hover:scale-110 focus:outline-none"></button>
+                                <button onclick="setPCCaseColor('white')" data-color="white" title="Белый" class="w-6 h-6 rounded-full bg-gray-100 border-2 border-gray-400 transition-transform hover:scale-110 focus:outline-none"></button>
+                                <button onclick="setPCCaseColor('silver')" data-color="silver" title="Серебристый" class="w-6 h-6 rounded-full bg-slate-400 border-2 border-gray-400 transition-transform hover:scale-110 focus:outline-none"></button>
+                                <button onclick="setPCCaseColor('red')" data-color="red" title="Красный" class="w-6 h-6 rounded-full bg-red-600 border-2 border-gray-400 transition-transform hover:scale-110 focus:outline-none"></button>
+                                <button onclick="setPCCaseColor('blue')" data-color="blue" title="Синий" class="w-6 h-6 rounded-full bg-blue-700 border-2 border-gray-400 transition-transform hover:scale-110 focus:outline-none"></button>
+                            </div>
+                        </div>
+
+                        <!-- RGB Lighting Color Selector -->
+                        <div class="flex flex-wrap items-center justify-between gap-2 pt-2.5 border-t border-gray-100 dark:border-gray-700/60">
+                            <span class="text-xs font-bold flex items-center gap-1.5 text-gray-700 dark:text-gray-200">
+                                <i class="fa-solid fa-lightbulb text-amber-400"></i>
+                                <span data-i18n="builder_rgb_color">Подсветка RGB:</span>
+                                <span id="activeRgbColorLabel" class="text-emerald-500 font-semibold">Авто</span>
+                            </span>
+                            <div class="flex flex-wrap items-center gap-1.5" id="rgbColorSwatches">
+                                <button onclick="setPCRgbColor('auto')" data-rgb="auto" title="Авто" class="px-2 h-6 rounded-full bg-slate-700 text-white text-[10px] font-bold border-2 border-transparent transition-transform hover:scale-105">AUTO</button>
+                                <button onclick="setPCRgbColor('cyan')" data-rgb="cyan" title="Голубой" class="w-6 h-6 rounded-full bg-cyan-400 border-2 border-transparent transition-transform hover:scale-110"></button>
+                                <button onclick="setPCRgbColor('purple')" data-rgb="purple" title="Фиолетовый" class="w-6 h-6 rounded-full bg-purple-500 border-2 border-transparent transition-transform hover:scale-110"></button>
+                                <button onclick="setPCRgbColor('emerald')" data-rgb="emerald" title="Изумрудный" class="w-6 h-6 rounded-full bg-emerald-500 border-2 border-transparent transition-transform hover:scale-110"></button>
+                                <button onclick="setPCRgbColor('crimson')" data-rgb="crimson" title="Красный" class="w-6 h-6 rounded-full bg-rose-600 border-2 border-transparent transition-transform hover:scale-110"></button>
+                                <button onclick="setPCRgbColor('gold')" data-rgb="gold" title="Золотой" class="w-6 h-6 rounded-full bg-amber-400 border-2 border-transparent transition-transform hover:scale-110"></button>
+                                <button onclick="setPCRgbColor('white')" data-rgb="white" title="Белый" class="w-6 h-6 rounded-full bg-white border-2 border-gray-300 transition-transform hover:scale-110"></button>
+                                <button onclick="setPCRgbColor('rainbow')" data-rgb="rainbow" title="Радуга" class="w-6 h-6 rounded-full bg-gradient-to-tr from-pink-500 via-amber-400 to-cyan-400 border-2 border-transparent transition-transform hover:scale-110"></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="pcCaseContainer" class="bg-slate-900 text-white rounded-3xl p-5 sm:p-6 border-2 border-slate-700 shadow-2xl relative overflow-hidden transition-all duration-500">
+                        <!-- Top Case Panel: Power Button & RGB Fans -->
+                        <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-800">
+                            <div class="flex items-center gap-2">
+                                <span id="pcPowerLed" class="w-3 h-3 rounded-full bg-slate-600 transition-colors"></span>
+                                <span class="text-xs font-mono uppercase tracking-wider text-slate-400">TECH-TOWER ATX</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i id="caseFan1" class="fa-solid fa-fan text-slate-500 text-lg"></i>
+                                <i id="caseFan2" class="fa-solid fa-fan text-slate-500 text-lg"></i>
+                                <i id="caseFan3" class="fa-solid fa-fan text-slate-500 text-lg"></i>
+                            </div>
+                        </div>
+
+                        <!-- Interactive Component Slots inside Case -->
+                        <div class="grid grid-cols-2 gap-3" id="pcCaseSlots">
+                            <!-- Injected by renderPCBuilder() -->
+                        </div>
+
+                        <!-- Compatibility & Power Status Bar -->
+                        <div id="buildStatusBox" class="mt-4 p-3 rounded-2xl bg-slate-800/90 border border-slate-700 text-xs space-y-1.5">
+                            <!-- Injected by renderPCBuilder() -->
+                        </div>
+                    </div>
+
+                    <!-- Benchmark & Telemetry Card -->
+                    <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-gray-100 dark:border-gray-700/60 shadow-sm space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-bold text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-gauge-high text-emerald-500"></i>
+                                <span data-i18n="builder_perf_title">Тест производительности & FPS</span>
+                            </h3>
+                            <span id="buildRankBadge" class="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-gray-300">
+                                N/A
+                            </span>
+                        </div>
+
+                        <!-- FPS Bars -->
+                        <div class="space-y-2.5 text-xs">
+                            <div>
+                                <div class="flex justify-between mb-1">
+                                    <span class="font-medium">Counter-Strike 2 (High)</span>
+                                    <span id="fpsCs2" class="font-bold text-emerald-500">0 FPS</span>
+                                </div>
+                                <div class="w-full h-2 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                                    <div id="barCs2" class="h-full bg-emerald-500 transition-all duration-500" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-1">
+                                    <span class="font-medium">Cyberpunk 2077 (Ultra)</span>
+                                    <span id="fpsCp" class="font-bold text-blue-500">0 FPS</span>
+                                </div>
+                                <div class="w-full h-2 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                                    <div id="barCp" class="h-full bg-blue-500 transition-all duration-500" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-1">
+                                    <span class="font-medium">Red Dead Redemption 2</span>
+                                    <span id="fpsRdr" class="font-bold text-purple-500">0 FPS</span>
+                                </div>
+                                <div class="w-full h-2 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                                    <div id="barRdr" class="h-full bg-purple-500 transition-all duration-500" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Stress Test Progress & Reward -->
+                        <div id="stressTestPanel" class="hidden p-3.5 rounded-2xl bg-slate-900 text-white space-y-2 border border-emerald-500/40">
+                            <div class="flex justify-between text-xs font-mono">
+                                <span id="stressStatusText">Testing...</span>
+                                <span id="stressTempText" class="text-amber-400">42°C</span>
+                            </div>
+                            <div class="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+                                <div id="stressProgressBar" class="h-full bg-gradient-to-r from-emerald-400 to-cyan-400 transition-all duration-200" style="width: 0%"></div>
+                            </div>
+                            <div id="stressRewardBox" class="hidden pt-1 text-xs text-emerald-300 font-semibold flex items-center justify-between">
+                                <span id="stressRewardText"></span>
+                                <button onclick="copyPromoCode()" class="px-2 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[11px]">
+                                    <i class="fa-solid fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                            <button id="runBenchmarkBtn" onclick="runStressTest()" class="py-3 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all">
+                                <i class="fa-solid fa-fire"></i> <span data-i18n="builder_run_test">Запустить стресс-тест</span>
+                            </button>
+                            <button onclick="addBuildToCart()" class="py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transition-all">
+                                <i class="fa-solid fa-cart-plus"></i> <span data-i18n="builder_add_cart">Сборку в корзину</span> (<span id="buildTotalPrice">$0</span>)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT: Component Selector Workbench -->
+                <div class="lg:col-span-7 bg-white dark:bg-slate-800 rounded-3xl p-5 sm:p-6 border border-gray-100 dark:border-gray-700/60 shadow-sm space-y-5">
+                    <!-- Slot Tabs -->
+                    <div class="flex overflow-x-auto no-scrollbar gap-2 pb-1" id="builderSlotTabs">
+                        <!-- Injected by renderPCBuilder() -->
+                    </div>
+
+                    <!-- Selected Slot Title -->
+                    <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-3">
+                        <div>
+                            <h3 id="activeSlotHeading" class="font-bold text-base">Выберите процессор</h3>
+                            <p class="text-xs text-gray-500 dark:text-gray-400" data-i18n="builder_pick_hint">Нажмите на деталь, чтобы установить её в корпус</p>
+                        </div>
+                        <span id="slotStepIndicator" class="text-xs font-semibold px-3 py-1 rounded-full bg-blue-50 dark:bg-slate-700 text-blue-600 dark:text-blue-300">1 / 6</span>
+                    </div>
+
+                    <!-- Parts List -->
+                    <div id="builderPartsList" class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        <!-- Injected by renderPCBuilder() -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ADMIN / EDIT PRODUCT PAGE -->
+        <section id="page-admin" class="hidden space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-xl sm:text-2xl font-bold" data-i18n="admin_title">Панель управления товарами</h2>
+                    <p class="text-gray-500 dark:text-gray-400 text-xs sm:text-sm" data-i18n="admin_subtitle">Редактируйте существующие товары или добавляйте новые в систему</p>
+                </div>
+                <button onclick="openProductModal()" class="w-full sm:w-auto justify-center px-4 py-3 sm:py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-lg shadow-blue-500/20 flex items-center space-x-2">
+                    <i class="fa-solid fa-plus"></i> <span data-i18n="admin_add_btn">Добавить товар</span>
+                </button>
+            </div>
+
+            <!-- Admin Products Table -->
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/50 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-gray-50 dark:bg-slate-900/50 border-b border-gray-100 dark:border-gray-700 text-xs font-semibold uppercase text-gray-500">
+                            <tr>
+                                <th class="p-4" data-i18n="th_product">Товар</th>
+                                <th class="p-4" data-i18n="th_category">Категория</th>
+                                <th class="p-4" data-i18n="th_price">Цена ($)</th>
+                                <th class="p-4 text-right" data-i18n="th_actions">Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminTableBody" class="divide-y divide-gray-100 dark:divide-gray-700">
+                            <!-- Injected via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-slate-900 mt-12 py-6 text-center text-xs text-gray-500">
+        <div class="max-w-7xl mx-auto px-4">
+            <p>© 2026 TechStore Inc. Все права защищены.</p>
+        </div>
+    </footer>
+
+    <!-- MANDATORY ONBOARDING / AUTH WELCOME OVERLAY (GATED START) -->
+    <div id="mandatoryAuthOverlay" class="fixed inset-0 z-50 bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-gray-100 dark:border-gray-700 relative text-center my-auto">
+            
+            <!-- Language Switcher inside Welcome Card -->
+            <div class="absolute top-4 right-4 sm:top-6 sm:right-6">
+                <select id="welcomeLangSelect" onchange="changeLanguage(this.value)" class="bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-gray-600 text-xs rounded-lg p-1.5 focus:ring-2 focus:ring-blue-500">
+                    <option value="ru">RU</option>
+                    <option value="en">EN</option>
+                    <option value="kz">KZ</option>
+                </select>
+            </div>
+
+            <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 mx-auto flex items-center justify-center text-white text-3xl shadow-lg shadow-blue-500/30 mb-4">
+                <i class="fa-solid fa-user-shield"></i>
+            </div>
+
+            <h2 class="text-2xl font-bold mb-2" data-i18n="welcome_title">Добро пожаловать в TechStore</h2>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-6" data-i18n="welcome_subtitle">Зарегистрируйтесь или войдите, чтобы получить доступ к покупкам</p>
+
+            <!-- Tabs -->
+            <div class="flex border-b border-gray-200 dark:border-gray-700 mb-6">
+                <button id="gateTabLogin" onclick="switchGateAuthTab('login')" class="w-1/2 py-2 text-center font-bold text-blue-600 border-b-2 border-blue-600" data-i18n="auth_tab_login">Вход</button>
+                <button id="gateTabReg" onclick="switchGateAuthTab('reg')" class="w-1/2 py-2 text-center font-bold text-gray-400 border-b-2 border-transparent hover:text-gray-600" data-i18n="auth_tab_reg">Регистрация</button>
+            </div>
+
+            <!-- Gate Login Form -->
+            <form id="gateLoginForm" onsubmit="handleGateAuth(event, 'login')" class="space-y-4 text-left">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-gray-500 mb-1" data-i18n="lbl_login_nick">Ник или Email</label>
+                    <input type="text" id="gateLoginIdentifier" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-gray-500 mb-1" data-i18n="lbl_pass">Пароль</label>
+                    <input type="password" id="gateLoginPassword" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                </div>
+                <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all shadow-md" data-i18n="btn_login">Войти</button>
+            </form>
+
+            <!-- Gate Registration Form -->
+            <form id="gateRegForm" onsubmit="handleGateAuth(event, 'reg')" class="space-y-4 text-left hidden">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-gray-500 mb-1" data-i18n="lbl_name">Ник (Имя пользователя)</label>
+                    <input type="text" id="gateRegName" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-gray-500 mb-1" data-i18n="lbl_email">Email</label>
+                    <input type="email" id="gateRegEmail" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-gray-500 mb-1" data-i18n="lbl_pass">Пароль</label>
+                    <input type="password" id="gateRegPassword" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                </div>
+                <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all shadow-md" data-i18n="btn_reg">Зарегистрироваться</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: CART -->
+    <div id="cartModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex justify-end transition-opacity">
+        <div class="w-full max-w-md bg-white dark:bg-slate-800 h-full shadow-2xl flex flex-col justify-between overflow-hidden">
+            <div class="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center shrink-0">
+                <h3 class="text-xl font-bold flex items-center space-x-2">
+                    <i class="fa-solid fa-cart-shopping text-blue-500"></i>
+                    <span data-i18n="cart_title">Корзина покупок</span>
+                </h3>
+                <button onclick="toggleCartModal(false)" class="text-gray-400 hover:text-gray-600 dark:hover:text-white">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Cart Items & Delivery Form Scrollable Area -->
+            <div class="p-6 overflow-y-auto space-y-5 flex-grow">
+                <div id="cartItemsList" class="space-y-4">
+                    <!-- Dynamic Items -->
+                </div>
+
+                <!-- Delivery Details Section -->
+                <div id="deliverySection" class="pt-4 border-t border-gray-100 dark:border-gray-700 space-y-3 hidden">
+                    <h4 class="font-bold text-sm flex items-center space-x-2 text-gray-700 dark:text-gray-200">
+                        <i class="fa-solid fa-truck-fast text-blue-500"></i>
+                        <span data-i18n="deliv_title">Детали доставки</span>
+                    </h4>
+                    
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-gray-500 mb-1" data-i18n="deliv_location">Местоположение (Город / Адрес)</label>
+                        <input type="text" id="orderLocation" placeholder="г. Алматы, ул. Абая 10" data-i18n-placeholder="deliv_location_ph" class="w-full px-3.5 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-gray-500 mb-1" data-i18n="deliv_service">Служба доставки</label>
+                        <select id="orderService" class="w-full px-3.5 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs">
+                            <option value="express" data-i18n="deliv_srv_express">Экспресс-доставка (1-2 дня)</option>
+                            <option value="standard" data-i18n="deliv_srv_standard">Стандартная доставка (3-5 дней)</option>
+                            <option value="kazpost" data-i18n="deliv_srv_post">Казпочта / Почтовая служба</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-gray-500 mb-1" data-i18n="deliv_method">Способ получения</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="deliveryMethod" value="door" checked class="peer sr-only">
+                                <div class="p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 peer-checked:border-blue-500 peer-checked:bg-blue-500/10 text-center transition-all">
+                                    <i class="fa-solid fa-door-open text-blue-500 mb-1 block text-sm"></i>
+                                    <span class="text-xs font-medium" data-i18n="deliv_door">До двери</span>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="deliveryMethod" value="postamat" class="peer sr-only">
+                                <div class="p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 peer-checked:border-blue-500 peer-checked:bg-blue-500/10 text-center transition-all">
+                                    <i class="fa-solid fa-box-archive text-blue-500 mb-1 block text-sm"></i>
+                                    <span class="text-xs font-medium" data-i18n="deliv_postamat">Постамат</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cart Footer / Total -->
+            <div class="p-6 border-t border-gray-100 dark:border-gray-700 space-y-4 bg-gray-50 dark:bg-slate-900/50 shrink-0">
+                <div class="flex justify-between items-center text-lg font-bold">
+                    <span data-i18n="cart_total">Итого к оплате:</span>
+                    <span id="cartTotal" class="text-blue-600 dark:text-blue-400">$0</span>
+                </div>
+                <button onclick="checkout()" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold shadow-lg shadow-blue-500/20 transition-all" data-i18n="cart_checkout">
+                    Оформить заказ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: ABOUT SITE -->
+    <div id="aboutModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-md w-full p-8 shadow-2xl border border-gray-100 dark:border-gray-700 relative text-center">
+            <button onclick="toggleAboutModal(false)" class="absolute top-6 right-6 text-gray-400 hover:text-gray-600 dark:hover:text-white">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+            <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 mx-auto flex items-center justify-center text-white text-3xl shadow-lg shadow-blue-500/30 mb-4">
+                <i class="fa-solid fa-desktop"></i>
+            </div>
+            <h3 class="text-2xl font-bold mb-2">TechStore</h3>
+            <p class="text-xs font-semibold text-blue-500 uppercase tracking-wider mb-4" data-i18n="about_subtitle">О нашем магазине</p>
+            <p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed mb-6" data-i18n="about_desc">
+                TechStore — современный онлайн-гипермаркет компьютерной техники, комплектующих и игровой периферии. Мы предлагаем быструю доставку до двери и в постаматы, официальную гарантию и удобную панель управления товарами.
+            </p>
+            <div class="bg-gray-50 dark:bg-slate-900/60 rounded-2xl p-4 text-xs text-gray-500 dark:text-gray-400 space-y-1.5 mb-6 text-left">
+                <div class="flex justify-between"><span data-i18n="about_ver_lbl">Версия платформы:</span> <span class="font-semibold text-gray-700 dark:text-gray-200">v2.4 (2026)</span></div>
+                <div class="flex justify-between"><span data-i18n="about_support_lbl">Поддержка:</span> <span class="font-semibold text-gray-700 dark:text-gray-200">support@techstore.kz</span></div>
+                <div class="flex justify-between"><span data-i18n="about_city_lbl">Главный офис:</span> <span class="font-semibold text-gray-700 dark:text-gray-200">Алматы, Казахстан</span></div>
+            </div>
+            <button onclick="toggleAboutModal(false)" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm transition-all shadow-md" data-i18n="btn_close">Закрыть</button>
+        </div>
+    </div>
+
+    <!-- MODAL: AUTHENTICATION (LOGIN / REGISTER) -->
+    <div id="authModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-md w-full p-8 shadow-2xl border border-gray-100 dark:border-gray-700 relative">
+            <button onclick="toggleAuthModal(false)" class="absolute top-6 right-6 text-gray-400 hover:text-gray-600 dark:hover:text-white">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+
+            <!-- Tabs -->
+            <div class="flex border-b border-gray-200 dark:border-gray-700 mb-6">
+                <button id="authTabLogin" onclick="switchAuthTab('login')" class="w-1/2 py-2 text-center font-bold text-blue-600 border-b-2 border-blue-600" data-i18n="auth_tab_login">Вход</button>
+                <button id="authTabReg" onclick="switchAuthTab('reg')" class="w-1/2 py-2 text-center font-bold text-gray-400 border-b-2 border-transparent hover:text-gray-600" data-i18n="auth_tab_reg">Регистрация</button>
+            </div>
+
+            <!-- Login Form -->
+            <form id="loginForm" onsubmit="handleAuth(event, 'login')" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-gray-500 mb-1" data-i18n="lbl_login_nick">Ник или Email</label>
+                    <input type="text" id="loginIdentifier" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-gray-500 mb-1" data-i18n="lbl_pass">Пароль</label>
+                    <input type="password" id="loginPassword" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                </div>
+                <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all shadow-md" data-i18n="btn_login">Войти</button>
+            </form>
+
+            <!-- Registration Form -->
+            <form id="regForm" onsubmit="handleAuth(event, 'reg')" class="space-y-4 hidden">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-gray-500 mb-1" data-i18n="lbl_name">Ник (Имя пользователя)</label>
+                    <input type="text" id="regName" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-gray-500 mb-1" data-i18n="lbl_email">Email</label>
+                    <input type="email" id="regEmail" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-gray-500 mb-1" data-i18n="lbl_pass">Пароль</label>
+                    <input type="password" id="regPassword" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                </div>
+                <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all shadow-md" data-i18n="btn_reg">Зарегистрироваться</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: CREATE / EDIT PRODUCT (ADMIN) -->
+    <div id="productModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-lg w-full p-8 shadow-2xl border border-gray-100 dark:border-gray-700 relative max-h-[90vh] overflow-y-auto">
+            <button onclick="closeProductModal()" class="absolute top-6 right-6 text-gray-400 hover:text-gray-600 dark:hover:text-white">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+
+            <h3 id="productModalTitle" class="text-xl font-bold mb-6" data-i18n="modal_add_title">Редактирование товара</h3>
+
+            <form id="productForm" onsubmit="saveProduct(event)" class="space-y-4">
+                <input type="hidden" id="prodId">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-gray-500 mb-1" data-i18n="lbl_prod_name">Название товара</label>
+                    <input type="text" id="prodName" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-gray-500 mb-1" data-i18n="lbl_prod_price">Цена ($)</label>
+                        <input type="number" step="0.01" id="prodPrice" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-gray-500 mb-1" data-i18n="lbl_prod_cat">Категория</label>
+                        <select id="prodCategory" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                            <option value="computers" data-i18n="cat_pcs">Компьютеры</option>
+                            <option value="peripherals" data-i18n="cat_periph">Периферия</option>
+                            <option value="components" data-i18n="cat_comp">Комплектующие</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-gray-500 mb-1" data-i18n="lbl_prod_image">Ссылка на картинку (URL)</label>
+                    <input type="url" id="prodImage" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-gray-500 mb-1" data-i18n="lbl_prod_desc">Описание / Характеристики</label>
+                    <textarea id="prodDesc" rows="3" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"></textarea>
+                </div>
+                <div class="flex space-x-3 pt-4">
+                    <button type="button" onclick="closeProductModal()" class="w-1/2 py-2.5 border border-gray-300 dark:border-gray-700 font-semibold rounded-xl hover:bg-gray-100 dark:hover:bg-slate-700 text-sm" data-i18n="btn_cancel">Отмена</button>
+                    <button type="submit" class="w-1/2 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm transition-all shadow-md" data-i18n="btn_save">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- NOTIFICATION TOAST -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-800 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center space-x-3 border border-slate-700">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-green-400"></i>
+        <span id="toastMsg" class="text-sm font-medium">Сообщение</span>
+    </div>
+
+    <!-- SCRIPT APPLICATION LOGIC -->
+    <script>
+        // --- TRANSLATIONS DICTIONARY ---
+        const translations = {
+            ru: {
+                welcome_title: "Добро пожаловать в TechStore",
+                welcome_subtitle: "Зарегистрируйтесь или войдите, чтобы получить доступ к покупкам",
+                nav_catalog: "Каталог",
+                nav_admin: "Управление",
+                hero_badge: "ТОП ТЕХНИКА 2026",
+                hero_title: "Собери свой мощный ПК",
+                hero_desc: "Лучшая периферия и оригинальные комплектующие с гарантией качества.",
+                hero_badge_winter: "❄️ ЗИМНЯЯ РАСПРОДАЖА",
+                hero_title_winter: "Новогодние скидки на ПК",
+                hero_desc_winter: "Успей забрать топовую периферию и комплектующие по зимним ценам!",
+                hero_badge_halloween: "🎃 ХЭЛЛОУИН СКИДКИ",
+                hero_title_halloween: "Жутко выгодные цены!",
+                hero_desc_halloween: "Мистические скидки на геймерскую технику и крутую периферию.",
+                cat_all: "Все товары",
+                cat_pcs: "Компьютеры",
+                cat_periph: "Периферия",
+                cat_comp: "Комплектующие",
+                search_placeholder: "Поиск...",
+                admin_title: "Панель управления товарами",
+                admin_subtitle: "Редактируйте существующие товары или добавляйте новые в систему",
+                admin_add_btn: "Добавить товар",
+                th_product: "Товар",
+                th_category: "Категория",
+                th_price: "Цена",
+                th_actions: "Действия",
+                cart_title: "Корзина покупок",
+                cart_total: "Итого к оплате:",
+                cart_checkout: "Оформить заказ",
+                auth_tab_login: "Вход",
+                auth_tab_reg: "Регистрация",
+                lbl_login_nick: "Ник или Email",
+                lbl_email: "Email",
+                lbl_pass: "Пароль",
+                lbl_name: "Ник (Имя)",
+                btn_login: "Войти",
+                btn_reg: "Зарегистрироваться",
+                btn_add_to_cart: "В корзину",
+                modal_add_title: "Редактирование товара",
+                lbl_prod_name: "Название товара",
+                lbl_prod_price: "Цена ($)",
+                lbl_prod_cat: "Категория",
+                lbl_prod_image: "Ссылка на картинку (URL)",
+                lbl_prod_desc: "Описание / Характеристики",
+                btn_cancel: "Отмена",
+                btn_save: "Сохранить",
+                user_guest: "Гость",
+                btn_logout: "Выйти",
+                empty_cart: "Ваша корзина пуста",
+                order_success: "Заказ успешно оформлен!",
+                deliv_title: "Детали доставки",
+                deliv_location: "Местоположение (Город / Адрес)",
+                deliv_location_ph: "г. Алматы, ул. Абая 10",
+                deliv_service: "Служба доставки",
+                deliv_srv_express: "Экспресс-доставка (1-2 дня)",
+                deliv_srv_standard: "Стандартная доставка (3-5 дней)",
+                deliv_srv_post: "Казпочта / Почтовая служба",
+                deliv_method: "Способ получения",
+                deliv_door: "До двери",
+                deliv_postamat: "Постамат",
+                deliv_err_loc: "Укажите местоположение для доставки!",
+                about_subtitle: "О нашем магазине",
+                about_desc: "TechStore — современный онлайн-гипермаркет компьютерной техники, комплектующих и игровой периферии. Мы предлагаем быструю доставку до двери и в постаматы, официальную гарантию и удобную панель управления товарами.",
+                about_ver_lbl: "Версия платформы:",
+                about_support_lbl: "Поддержка:",
+                about_city_lbl: "Главный офис:",
+                btn_close: "Закрыть",
+                nav_builder: "Сборка ПК",
+                builder_badge: "ИНТЕРАКТИВНЫЙ СИМУЛЯТОР",
+                builder_title: "Собери ПК своей мечты",
+                builder_subtitle: "Устанавливай детали в корпус, следи за сокетами и ваттами, запусти стресс-тест и получи промокод за крутую сборку!",
+                builder_auto: "Автосборка",
+                builder_reset: "Очистить",
+                builder_perf_title: "Тест производительности & FPS",
+                builder_run_test: "Запустить стресс-тест",
+                builder_add_cart: "Сборку в корзину",
+                builder_pick_hint: "Нажмите на деталь, чтобы установить её в корпус",
+                builder_3d_label: "3D Вид ПК 360°",
+                builder_3d_hint: "Вращайте и приближайте",
+                builder_case_color: "Цвет корпуса:",
+                builder_rgb_color: "Подсветка RGB:",
+                color_black: "Чёрный",
+                color_white: "Белый",
+                color_silver: "Серебристый",
+                color_red: "Красный",
+                color_blue: "Синий",
+                rgb_auto: "Авто",
+                rgb_cyan: "Голубой",
+                rgb_purple: "Фиолетовый",
+                rgb_emerald: "Изумрудный",
+                rgb_crimson: "Красный",
+                rgb_gold: "Золотой",
+                rgb_white: "Белый",
+                rgb_rainbow: "Радуга",
+                slot_cpu: "Процессор",
+                slot_mb: "Мат. плата",
+                slot_gpu: "Видеокарта",
+                slot_ram: "ОЗУ (RAM)",
+                slot_ssd: "SSD Накопитель",
+                slot_psu: "Блок питания",
+                slot_empty: "Не установлено",
+                build_ok: "Все детали совместимы! Система готова к запуску.",
+                build_incomplete: "Установите все 6 деталей, чтобы запустить ПК.",
+                build_err_socket: "Несовместимый сокет процессора и материнской платы!",
+                build_err_psu: "Не хватает мощности БП! Выберите блок мощнее.",
+                build_added_cart: "Вся сборка ПК добавлена в корзину!"
+            },
+            en: {
+                welcome_title: "Welcome to TechStore",
+                welcome_subtitle: "Register or log in to access the store",
+                nav_catalog: "Catalog",
+                nav_admin: "Management",
+                hero_badge: "TOP HARDWARE 2026",
+                hero_title: "Build Your Powerful PC",
+                hero_desc: "Best peripherals and authentic components with quality assurance.",
+                hero_badge_winter: "❄️ WINTER SALE",
+                hero_title_winter: "New Year PC Discounts",
+                hero_desc_winter: "Grab high-end hardware and gear at freezing low prices!",
+                hero_badge_halloween: "🎃 HALLOWEEN SALE",
+                hero_title_halloween: "Spooktacular Deals!",
+                hero_desc_halloween: "Mystical discounts on gaming gear and epic computer parts.",
+                cat_all: "All Products",
+                cat_pcs: "Computers",
+                cat_periph: "Peripherals",
+                cat_comp: "Components",
+                search_placeholder: "Search...",
+                admin_title: "Product Control Panel",
+                admin_subtitle: "Edit existing products or add new ones to the system",
+                admin_add_btn: "Add Product",
+                th_product: "Product",
+                th_category: "Category",
+                th_price: "Price",
+                th_actions: "Actions",
+                cart_title: "Shopping Cart",
+                cart_total: "Total Amount:",
+                cart_checkout: "Checkout",
+                auth_tab_login: "Login",
+                auth_tab_reg: "Register",
+                lbl_login_nick: "Nickname or Email",
+                lbl_email: "Email",
+                lbl_pass: "Password",
+                lbl_name: "Nickname",
+                btn_login: "Sign In",
+                btn_reg: "Sign Up",
+                btn_add_to_cart: "Add to Cart",
+                modal_add_title: "Edit Product",
+                lbl_prod_name: "Product Name",
+                lbl_prod_price: "Price ($)",
+                lbl_prod_cat: "Category",
+                lbl_prod_image: "Image URL",
+                lbl_prod_desc: "Description / Specs",
+                btn_cancel: "Cancel",
+                btn_save: "Save",
+                user_guest: "Guest",
+                btn_logout: "Logout",
+                empty_cart: "Your cart is empty",
+                order_success: "Order completed successfully!",
+                deliv_title: "Delivery Details",
+                deliv_location: "Location (City / Address)",
+                deliv_location_ph: "Almaty, Abay ave 10",
+                deliv_service: "Delivery Service",
+                deliv_srv_express: "Express Delivery (1-2 days)",
+                deliv_srv_standard: "Standard Delivery (3-5 days)",
+                deliv_srv_post: "Kazpost / Postal Service",
+                deliv_method: "Delivery Method",
+                deliv_door: "To Door",
+                deliv_postamat: "Parcel Locker",
+                deliv_err_loc: "Please enter your delivery location!",
+                about_subtitle: "About Our Store",
+                about_desc: "TechStore is a modern online hypermarket for computer hardware, components, and gaming peripherals. We offer fast door-to-door and parcel locker delivery, official warranty, and a handy product management panel.",
+                about_ver_lbl: "Platform version:",
+                about_support_lbl: "Support:",
+                about_city_lbl: "Headquarters:",
+                btn_close: "Close",
+                nav_builder: "PC Builder",
+                builder_badge: "INTERACTIVE SIMULATOR",
+                builder_title: "Build Your Dream PC",
+                builder_subtitle: "Install hardware into the case, match sockets & wattage, run a stress test, and earn a promo code!",
+                builder_auto: "Auto Build",
+                builder_reset: "Clear",
+                builder_perf_title: "Performance & FPS Estimator",
+                builder_run_test: "Run Stress Test",
+                builder_add_cart: "Add Build to Cart",
+                builder_pick_hint: "Click a component to install it into your PC case",
+                builder_3d_label: "3D PC View 360°",
+                builder_3d_hint: "Drag to rotate & pinch/scroll to zoom",
+                builder_case_color: "Case Color:",
+                builder_rgb_color: "RGB Lighting:",
+                color_black: "Black",
+                color_white: "White",
+                color_silver: "Silver",
+                color_red: "Crimson Red",
+                color_blue: "Navy Blue",
+                rgb_auto: "Auto",
+                rgb_cyan: "Cyan",
+                rgb_purple: "Purple",
+                rgb_emerald: "Emerald",
+                rgb_crimson: "Red",
+                rgb_gold: "Gold",
+                rgb_white: "White",
+                rgb_rainbow: "Rainbow",
+                slot_cpu: "CPU",
+                slot_mb: "Motherboard",
+                slot_gpu: "Graphics Card",
+                slot_ram: "Memory (RAM)",
+                slot_ssd: "NVMe SSD",
+                slot_psu: "Power Supply",
+                slot_empty: "Empty Slot",
+                build_ok: "All parts compatible! System ready to boot.",
+                build_incomplete: "Install all 6 components to power on the PC.",
+                build_err_socket: "CPU and Motherboard socket mismatch!",
+                build_err_psu: "Insufficient PSU wattage! Choose a stronger PSU.",
+                build_added_cart: "Full PC build added to cart!"
+            },
+            kz: {
+                welcome_title: "TechStore дүкеніне кош келдіңіз",
+                welcome_subtitle: "Сатып алуды бастау үшін тіркеліңіз немесе жүйеге кіріңіз",
+                nav_catalog: "Каталог",
+                nav_admin: "Басқару",
+                hero_badge: "ҮЗДІК ТЕХНИКА 2026",
+                hero_title: "Қуатты ДК жинаңыз",
+                hero_desc: "Сапа кепілдігі бар ең жақсы периферия мен түпнұсқа компоненттер.",
+                hero_badge_winter: "❄️ ҚЫСҚЫ ЖЕҢІЛДІКТЕР",
+                hero_title_winter: "Жаңа жылдық ДК жеңілдіктері",
+                hero_desc_winter: "Үздік техниканы тиімді қысқы бағамен алып үлгеріңіз!",
+                hero_badge_halloween: "🎃 ХЭЛЛОУИН ЖЕҢІЛДІКТЕРІ",
+                hero_title_halloween: "Өте тиімді сиқырлы бағалар!",
+                hero_desc_halloween: "Геймерлік техника мен периферияға арналған сұмдық жеңілдіктер.",
+                cat_all: "Барлық тауарлар",
+                cat_pcs: "Компьютерлер",
+                cat_periph: "Периферия",
+                cat_comp: "Комплектующие",
+                search_placeholder: "Издеу...",
+                admin_title: "Тауарларды басқару панелі",
+                admin_subtitle: "Бар тауарларды өңдеңіз немесе жүйеге жаңасын қосыңыз",
+                admin_add_btn: "Тауар қосу",
+                th_product: "Тауар",
+                th_category: "Санат",
+                th_price: "Бағасы",
+                th_actions: "Әрекеттер",
+                cart_title: "Сатып алу себеті",
+                cart_total: "Барлығы төлеуге:",
+                cart_checkout: "Төлемді рәсімдеу",
+                auth_tab_login: "Кіру",
+                auth_tab_reg: "Тіркелу",
+                lbl_login_nick: "Ник немесе Email",
+                lbl_email: "Email",
+                lbl_pass: "Құпия сөз",
+                lbl_name: "Ник (Аты)",
+                btn_login: "Кіру",
+                btn_reg: "Тіркелу",
+                btn_add_to_cart: "Себетке",
+                modal_add_title: "Тауарды өңдеу",
+                lbl_prod_name: "Тауар атауы",
+                lbl_prod_price: "Бағасы ($)",
+                lbl_prod_cat: "Санат",
+                lbl_prod_image: "Сурет сілтемесі (URL)",
+                lbl_prod_desc: "Сипаттамасы / Сипаттары",
+                btn_cancel: "Бас тарту",
+                btn_save: "Сақтау",
+                user_guest: "Қонақ",
+                btn_logout: "Шығу",
+                empty_cart: "Себетіңіз бош",
+                order_success: "Тапсырыс сәтті рәсімделді!",
+                deliv_title: "Жеткізу мәліметтері",
+                deliv_location: "Орналасқан жері (Қала / Мекенжай)",
+                deliv_location_ph: "Алматы қ., Абай даңғ. 10",
+                deliv_service: "Жеткізу қызметі",
+                deliv_srv_express: "Экспресс-жеткізу (1-2 күн)",
+                deliv_srv_standard: "Стандартты жеткізу (3-5 күн)",
+                deliv_srv_post: "Қазпошта / Пошта қызметі",
+                deliv_method: "Алу тәсілі",
+                deliv_door: "Есікке дейін",
+                deliv_postamat: "Постамат",
+                deliv_err_loc: "Жеткізу мекенжайын көрсетіңіз!",
+                about_subtitle: "Біздің дүкен туралы",
+                about_desc: "TechStore — компьютерлік техника, компоненттер және ойын перифериясының заманауи онлайн-гипермаркеті. Біз есікке дейін және постаматтарға жылдам жеткізуді, ресми кепілдікті және ыңғайлы басқару панелін ұсынамыз.",
+                about_ver_lbl: "Платформа нұсқасы:",
+                about_support_lbl: "Қолдау қызметі:",
+                about_city_lbl: "Бас кеңсе:",
+                btn_close: "Жабу",
+                nav_builder: "ДК жинау",
+                builder_badge: "ИНТЕРАКТИВТІ СИМУЛЯТОР",
+                builder_title: "Арманыңыздағы ДК жинаңыз",
+                builder_subtitle: "Бөлшектерді корпусқа орнатыңыз, сокет пен қуатты тексеріңіз, стресс-тест жасап промокод алыңыз!",
+                builder_auto: "Автожинақ",
+                builder_reset: "Тазалау",
+                builder_perf_title: "Өнімділік & FPS тесті",
+                builder_run_test: "Стресс-тестті бастау",
+                builder_add_cart: "Жинақты себетке",
+                builder_pick_hint: "Корпусқа орнату үшін бөлшекті басыңыз",
+                builder_3d_label: "3D ДК Көрінісі 360°",
+                builder_3d_hint: "Бұру және жақындату",
+                builder_case_color: "Корпус түсі:",
+                builder_rgb_color: "RGB жарығы:",
+                color_black: "Қара",
+                color_white: "Ақ",
+                color_silver: "Күміс",
+                color_red: "Қызыл",
+                color_blue: "Көк",
+                rgb_auto: "Авто",
+                rgb_cyan: "Көгілдір",
+                rgb_purple: "Күлгін",
+                rgb_emerald: "Зүбаржат",
+                rgb_crimson: "Қызыл",
+                rgb_gold: "Алтын",
+                rgb_white: "Ақ",
+                rgb_rainbow: "Кемпірқосақ",
+                slot_cpu: "Процессор",
+                slot_mb: "Аналық тақша",
+                slot_gpu: "Бейнекарта",
+                slot_ram: "Жедел жады",
+                slot_ssd: "SSD жинақтағыш",
+                slot_psu: "Қуат блогы",
+                slot_empty: "Орнатылмаған",
+                build_ok: "Барлық бөлшектер үйлесімді! Жүйе іске қосуға дайын.",
+                build_incomplete: "ДК қосу үшін барлық 6 бөлшекті орнатыңыз.",
+                build_err_socket: "Процессор мен аналық тақшаның сокеті сәйкес келмейді!",
+                build_err_psu: "Қуат блогының ватты жеткіліксіз! Күштірек БП таңдаңыз.",
+                build_added_cart: "Толық ДК жинағы себетке қосылды!"
+            }
+        };
+
+        // Initial Sample Data
+        const initialProducts = [
+            { id: 1, name: "Gaming Desktop Ultra R9", category: "computers", price: 1899, image: "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=500&auto=format&fit=crop&q=60", desc: "Ryzen 9 7900X, RTX 4080 16GB, 32GB DDR5 RAM, 2TB NVMe SSD." },
+            { id: 2, name: "Mechanical Keyboard RGB Pro", category: "peripherals", price: 129, image: "https://images.unsplash.com/photo-1511467687858-23d96c32e4ae?w=500&auto=format&fit=crop&q=60", desc: "Hot-swappable switches, wireless 2.4GHz + Bluetooth, custom keycaps." },
+            { id: 3, name: "GeForce RTX 4090 OC", category: "components", price: 1699, image: "https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=500&auto=format&fit=crop&q=60", desc: "24GB GDDR6X, DLSS 3.0, custom triple-fan cooling design." },
+            { id: 4, name: "Pro Gaming Wireless Mouse", category: "peripherals", price: 89, image: "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=500&auto=format&fit=crop&q=60", desc: "Ultra-lightweight 60g, 26K DPI sensor, 80h battery life." },
+            { id: 5, name: "UltraWide Curved Monitor 34\"", category: "peripherals", price: 649, image: "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=500&auto=format&fit=crop&q=60", desc: "144Hz, 1ms IPS Panel, HDR400, 3440x1440 resolution." },
+            { id: 6, name: "DDR5 32GB (2x16GB) 6000MHz", category: "components", price: 140, image: "https://images.unsplash.com/photo-1562976540-1502c2145186?w=500&auto=format&fit=crop&q=60", desc: "Low-latency gaming RAM with customizable RGB heatsink." }
+        ];
+
+        // --- PC BUILDER HARDWARE DATABASE ---
+        const pcBuilderCatalog = {
+            cpu: [
+                { id: 'cpu_1', name: 'Intel Core i5-13400F', price: 210, score: 48, watts: 65, socket: 'LGA1700', tier: 'Budget', spec: '10 Cores, 4.6 GHz, LGA1700' },
+                { id: 'cpu_2', name: 'AMD Ryzen 5 7600X', price: 245, score: 56, watts: 105, socket: 'AM5', tier: 'Mid', spec: '6 Cores, 5.3 GHz, AM5' },
+                { id: 'cpu_3', name: 'Intel Core i7-14700K', price: 410, score: 82, watts: 180, socket: 'LGA1700', tier: 'Pro', spec: '20 Cores, 5.6 GHz, LGA1700' },
+                { id: 'cpu_4', name: 'AMD Ryzen 9 7950X3D', price: 620, score: 98, watts: 120, socket: 'AM5', tier: 'Flagship', spec: '16 Cores, 5.7 GHz, 3D V-Cache, AM5' }
+            ],
+            mb: [
+                { id: 'mb_1', name: 'ASUS PRIME B760M-K', price: 120, score: 15, watts: 25, socket: 'LGA1700', tier: 'Budget', spec: 'Micro-ATX, LGA1700, DDR5' },
+                { id: 'mb_2', name: 'MSI PRO B650M-P', price: 135, score: 18, watts: 25, socket: 'AM5', tier: 'Budget', spec: 'Micro-ATX, AM5, PCIe 4.0' },
+                { id: 'mb_3', name: 'GIGABYTE Z790 AORUS ELITE', price: 260, score: 30, watts: 35, socket: 'LGA1700', tier: 'Pro', spec: 'ATX, LGA1700, Wi-Fi 6E' },
+                { id: 'mb_4', name: 'ASUS ROG STRIX X670E-F', price: 380, score: 35, watts: 40, socket: 'AM5', tier: 'Flagship', spec: 'ATX, AM5, PCIe 5.0, RGB' }
+            ],
+            gpu: [
+                { id: 'gpu_1', name: 'NVIDIA RTX 4060 8GB', price: 310, score: 45, watts: 115, tier: 'Budget', spec: '8GB GDDR6, DLSS 3, 1080p Gaming' },
+                { id: 'gpu_2', name: 'AMD Radeon RX 7800 XT', price: 510, score: 68, watts: 263, tier: 'Mid', spec: '16GB GDDR6, 2K Ultra Gaming' },
+                { id: 'gpu_3', name: 'NVIDIA RTX 4080 SUPER', price: 1020, score: 88, watts: 320, tier: 'Pro', spec: '16GB GDDR6X, Ray Tracing Pro' },
+                { id: 'gpu_4', name: 'NVIDIA RTX 4090 ROG OC', price: 1750, score: 100, watts: 450, tier: 'Flagship', spec: '24GB GDDR6X, 4K Extreme' }
+            ],
+            ram: [
+                { id: 'ram_1', name: '16GB DDR5 5200MHz', price: 65, score: 15, watts: 10, tier: 'Budget', spec: '2x8GB Dual Channel' },
+                { id: 'ram_2', name: '32GB DDR5 6000MHz RGB', price: 130, score: 28, watts: 15, tier: 'Mid', spec: '2x16GB CL30 Low Latency' },
+                { id: 'ram_3', name: '64GB DDR5 6400MHz Dominator', price: 265, score: 40, watts: 20, tier: 'Flagship', spec: '2x32GB Extreme Workstation' }
+            ],
+            ssd: [
+                { id: 'ssd_1', name: 'Kingston NV2 500GB NVMe', price: 45, score: 10, watts: 5, tier: 'Budget', spec: 'Read 3500 MB/s, M.2 PCIe 4.0' },
+                { id: 'ssd_2', name: 'Samsung 980 PRO 1TB', price: 95, score: 20, watts: 7, tier: 'Mid', spec: 'Read 7000 MB/s, M.2 NVMe' },
+                { id: 'ssd_3', name: 'Samsung 990 PRO 2TB', price: 175, score: 30, watts: 8, tier: 'Flagship', spec: 'Read 7450 MB/s, Heatsink' }
+            ],
+            psu: [
+                { id: 'psu_1', name: 'DeepCool PF550 550W', price: 55, score: 10, watts: 550, tier: 'Budget', spec: '550W 80+ Standard' },
+                { id: 'psu_2', name: 'Corsair RM750e 750W Gold', price: 105, score: 20, watts: 750, tier: 'Mid', spec: '750W 80+ Gold, Modular' },
+                { id: 'psu_3', name: 'ASUS ROG THOR 1000W Platinum', price: 250, score: 30, watts: 1000, tier: 'Flagship', spec: '1000W 80+ Platinum, OLED' }
+            ]
+        };
+
+        const builderSlotOrder = [
+            { key: 'cpu', icon: 'fa-microchip', labelKey: 'slot_cpu' },
+            { key: 'mb', icon: 'fa-chess-board', labelKey: 'slot_mb' },
+            { key: 'gpu', icon: 'fa-display', labelKey: 'slot_gpu' },
+            { key: 'ram', icon: 'fa-memory', labelKey: 'slot_ram' },
+            { key: 'ssd', icon: 'fa-hard-drive', labelKey: 'slot_ssd' },
+            { key: 'psu', icon: 'fa-plug-circle-bolt', labelKey: 'slot_psu' }
+        ];
+
+        // --- STATE MANAGEMENT ---
+        let currentLang = localStorage.getItem('app_lang') || 'ru';
+        let currentTheme = localStorage.getItem('app_theme') || 'dark';
+        let isWinterMode = localStorage.getItem('app_winter') === 'true';
+        let isHalloweenMode = localStorage.getItem('app_halloween') === 'true';
+        let products = JSON.parse(localStorage.getItem('app_products')) || initialProducts;
+        let cart = JSON.parse(localStorage.getItem('app_cart')) || [];
+        let registeredUsers = JSON.parse(localStorage.getItem('app_users_db')) || [];
+        let currentUser = JSON.parse(localStorage.getItem('app_user')) || null;
+        let activeCategory = 'all';
+
+        // PC Builder State
+        let currentBuild = JSON.parse(localStorage.getItem('app_pc_build')) || {
+            cpu: null, mb: null, gpu: null, ram: null, ssd: null, psu: null
+        };
+        let pcCaseColor = localStorage.getItem('app_pc_case_color') || 'black';
+        let pcRgbColor = localStorage.getItem('app_pc_rgb_color') || 'auto';
+        let activeBuilderSlot = 'cpu';
+        let isStressTesting = false;
+        let lastGeneratedPromo = 'TECHBUILD10';
+
+        const caseColorPresets = {
+            black:  { main: 0x181c26, trim: 0x2a3142, labelKey: 'color_black' },
+            white:  { main: 0xf1f5f9, trim: 0xcbd5e1, labelKey: 'color_white' },
+            silver: { main: 0x94a3b8, trim: 0x64748b, labelKey: 'color_silver' },
+            red:    { main: 0x991b1b, trim: 0x450a0a, labelKey: 'color_red' },
+            blue:   { main: 0x1e3a8a, trim: 0x172554, labelKey: 'color_blue' }
+        };
+
+        const rgbColorPresets = {
+            auto:    { hex: null,     labelKey: 'rgb_auto' },
+            cyan:    { hex: 0x06b6d4, labelKey: 'rgb_cyan' },
+            purple:  { hex: 0xa855f7, labelKey: 'rgb_purple' },
+            emerald: { hex: 0x10b981, labelKey: 'rgb_emerald' },
+            crimson: { hex: 0xf43f5e, labelKey: 'rgb_crimson' },
+            gold:    { hex: 0xf59e0b, labelKey: 'rgb_gold' },
+            white:   { hex: 0xf8fafc, labelKey: 'rgb_white' },
+            rainbow: { hex: 'rainbow', labelKey: 'rgb_rainbow' }
+        };
+
+        // Particle Canvas Logic
+        let canvas, ctx, particles = [];
+
+        // --- THREE.JS 3D PC SCENE STATE ---
+        let pc3d = {
+            initialized: false,
+            scene: null,
+            camera: null,
+            renderer: null,
+            controls: null,
+            pcGroup: null,
+            partsGroup: null,
+            caseFans: [],
+            gpuFans: [],
+            cpuFan: null,
+            rgbMaterials: [],
+            glassMaterial: null,
+            metalDarkMat: null,
+            metalTrimMat: null
+        };
+
+        // --- INITIALIZATION ---
+        window.onload = function() {
+            // Apply language
+            document.getElementById('langSelect').value = currentLang;
+            document.getElementById('welcomeLangSelect').value = currentLang;
+
+            // Apply theme
+            if (currentTheme === 'dark') {
+                document.documentElement.classList.add('dark');
+                document.getElementById('themeIcon').className = 'fa-solid fa-sun text-yellow-400 text-lg';
+            } else {
+                document.documentElement.classList.remove('dark');
+                document.getElementById('themeIcon').className = 'fa-solid fa-moon text-lg';
+            }
+
+            // Check mandatory auth state
+            checkGateAuth();
+
+            // Init Canvas FX
+            initCanvas();
+
+            // Init 3D PC Builder Scene
+            init3DPCScene();
+
+            // Apply seasonal modes
+            updateAtmosphereUI();
+
+            renderAuthHeader();
+            renderCatalog();
+            renderAdminTable();
+            renderPCBuilder();
+            updateCartBadge();
+        };
+
+    // --- NAVIGATION & CATEGORY CONTROLLERS ---
+    function navigateTo(pageId) {
+        document.getElementById('page-catalog').classList.add('hidden');
+        document.getElementById('page-builder').classList.add('hidden');
+        document.getElementById('page-admin').classList.add('hidden');
+
+        const targetPage = document.getElementById(`page-${pageId}`);
+        if (targetPage) {
+            targetPage.classList.remove('hidden');
+        }
+
+        if (pageId === 'builder') {
+            renderPCBuilder();
+            setTimeout(resize3DPCScene, 50);
+        }
+
+        // Update mobile bottom navigation active state
+        const mobCatalog = document.getElementById('mobNavCatalog');
+        const mobBuilder = document.getElementById('mobNavBuilder');
+        const mobAdmin = document.getElementById('mobNavAdmin');
+        if (mobCatalog && mobAdmin && mobBuilder) {
+            const inactiveClass = "flex flex-col items-center justify-center w-full h-full text-gray-500 dark:text-gray-400 space-y-1 transition-colors";
+            mobCatalog.className = inactiveClass;
+            mobBuilder.className = inactiveClass;
+            mobAdmin.className = inactiveClass;
+
+            if (pageId === 'catalog') {
+                mobCatalog.className = "flex flex-col items-center justify-center w-full h-full text-blue-600 dark:text-blue-400 space-y-1 transition-colors";
+            } else if (pageId === 'builder') {
+                mobBuilder.className = "flex flex-col items-center justify-center w-full h-full text-emerald-500 dark:text-emerald-400 space-y-1 transition-colors";
+            } else if (pageId === 'admin') {
+                mobAdmin.className = "flex flex-col items-center justify-center w-full h-full text-indigo-600 dark:text-indigo-400 space-y-1 transition-colors";
+            }
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function setCategory(category) {
+        activeCategory = category;
+        const buttons = document.querySelectorAll('#categoryFilters button');
+        buttons.forEach(btn => {
+            btn.classList.remove('bg-blue-600', 'text-white', 'active');
+            btn.classList.add('bg-gray-100', 'dark:bg-slate-700', 'text-gray-600', 'dark:text-gray-300');
+        });
+
+        // Highlight active button
+        const activeBtn = Array.from(buttons).find(b => b.getAttribute('onclick').includes(`'${category}'`));
+        if (activeBtn) {
+            activeBtn.classList.remove('bg-gray-100', 'dark:bg-slate-700', 'text-gray-600', 'dark:text-gray-300');
+            activeBtn.classList.add('bg-blue-600', 'text-white', 'active');
+        }
+
+        renderCatalog();
+    }
+
+    // --- SEASONAL & THEME LOGIC ---
+    function toggleWinterMode() {
+        isWinterMode = !isWinterMode;
+        if (isWinterMode) isHalloweenMode = false;
+        localStorage.setItem('app_winter', isWinterMode);
+        localStorage.setItem('app_halloween', isHalloweenMode);
+        updateAtmosphereUI();
+        renderCatalog();
+    }
+
+    function toggleHalloweenMode() {
+        isHalloweenMode = !isHalloweenMode;
+        if (isHalloweenMode) isWinterMode = false;
+        localStorage.setItem('app_winter', isWinterMode);
+        localStorage.setItem('app_halloween', isHalloweenMode);
+        updateAtmosphereUI();
+        renderCatalog();
+    }
+
+    function updateAtmosphereUI() {
+        const garland = document.getElementById('garlandBar');
+        const heroBanner = document.getElementById('heroBanner');
+        const heroBadge = document.getElementById('heroBadge');
+        const heroTitle = document.getElementById('heroTitle');
+        const heroDesc = document.getElementById('heroDesc');
+        const heroIcon = document.getElementById('heroIcon');
+
+        if (isWinterMode) {
+            garland.className = "h-1 w-full winter-garland block";
+            heroBanner.className = "relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-700 via-cyan-600 to-indigo-800 text-white p-8 sm:p-12 shadow-xl winter-active border border-cyan-400/40 transition-all duration-500";
+            heroBadge.innerText = translations[currentLang].hero_badge_winter || translations[currentLang].hero_badge;
+            heroTitle.innerText = translations[currentLang].hero_title_winter || translations[currentLang].hero_title;
+            heroDesc.innerText = translations[currentLang].hero_desc_winter || translations[currentLang].hero_desc;
+            heroIcon.className = "fa-solid fa-snowflake absolute right-4 -bottom-10 text-[200px] opacity-20 pointer-events-none transition-all duration-500 text-cyan-200 animate-spin-slow";
+        } else if (isHalloweenMode) {
+            garland.className = "h-1 w-full halloween-garland block";
+            heroBanner.className = "relative overflow-hidden rounded-3xl bg-gradient-to-r from-orange-600 via-purple-700 to-slate-900 text-white p-8 sm:p-12 shadow-xl halloween-active border border-orange-500/40 transition-all duration-500";
+            heroBadge.innerText = translations[currentLang].hero_badge_halloween || translations[currentLang].hero_badge;
+            heroTitle.innerText = translations[currentLang].hero_title_halloween || translations[currentLang].hero_title;
+            heroDesc.innerText = translations[currentLang].hero_desc_halloween || translations[currentLang].hero_desc;
+            heroIcon.className = "fa-solid fa-ghost absolute right-4 -bottom-10 text-[200px] opacity-20 pointer-events-none transition-all duration-500 text-orange-300";
+        } else {
+            garland.className = "h-1 w-full hidden";
+            heroBanner.className = "relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-8 sm:p-12 shadow-xl transition-all duration-500";
+            heroBadge.innerText = translations[currentLang].hero_badge;
+            heroTitle.innerText = translations[currentLang].hero_title;
+            heroDesc.innerText = translations[currentLang].hero_desc;
+            heroIcon.className = "fa-solid fa-microchip absolute right-4 -bottom-10 text-[200px] opacity-10 pointer-events-none transition-all duration-500";
+        }
+    }
+
+    function updateLanguageUI() {
+        document.querySelectorAll('[data-i18n]').forEach(elem => {
+            const key = elem.getAttribute('data-i18n');
+            if (translations[currentLang] && translations[currentLang][key]) {
+                elem.innerText = translations[currentLang][key];
+            }
+        });
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(elem => {
+            const key = elem.getAttribute('data-i18n-placeholder');
+            if (translations[currentLang] && translations[currentLang][key]) {
+                elem.placeholder = translations[currentLang][key];
+            }
+        });
+        updateAtmosphereUI();
+    }
+
+    // --- CANVAS PARTICLES SYSTEM ---
+    function initCanvas() {
+        canvas = document.getElementById('fxCanvas');
+        if (!canvas) return;
+        ctx = canvas.getContext('2d');
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        particles = [];
+        for (let i = 0; i < 60; i++) {
+            particles.push(createParticle());
+        }
+
+        requestAnimationFrame(animateParticles);
+    }
+
+    function resizeCanvas() {
+        if (!canvas) return;
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+
+    function createParticle() {
+        return {
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            radius: Math.random() * 3 + 1,
+            speedY: Math.random() * 1.5 + 0.5,
+            speedX: Math.random() * 0.6 - 0.3,
+            opacity: Math.random() * 0.7 + 0.3,
+            type: Math.random() > 0.5 ? 'snowflake' : 'pumpkin'
+        };
+    }
+
+    function animateParticles() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (isWinterMode || isHalloweenMode) {
+            particles.forEach(p => {
+                p.y += p.speedY;
+                p.x += p.speedX;
+
+                if (p.y > canvas.height) {
+                    p.y = -10;
+                    p.x = Math.random() * canvas.width;
+                }
+
+                ctx.beginPath();
+                if (isWinterMode) {
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(255, 255, 255, ${p.opacity})`;
+                } else if (isHalloweenMode) {
+                    ctx.arc(p.x, p.y, p.radius * 1.2, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(249, 115, 22, ${p.opacity})`;
+                }
+                ctx.fill();
+            });
+        }
+
+        requestAnimationFrame(animateParticles);
+    }
+
+    // --- GATED AUTH LOGIC ---
+        function checkGateAuth() {
+            const overlay = document.getElementById('mandatoryAuthOverlay');
+            if (!currentUser) {
+                overlay.classList.remove('hidden');
+            } else {
+                overlay.classList.add('hidden');
+            }
+        }
+
+        function switchGateAuthTab(tab) {
+            const loginForm = document.getElementById('gateLoginForm');
+            const regForm = document.getElementById('gateRegForm');
+            const tabLogin = document.getElementById('gateTabLogin');
+            const tabReg = document.getElementById('gateTabReg');
+
+            if (tab === 'login') {
+                loginForm.classList.remove('hidden');
+                regForm.classList.add('hidden');
+                tabLogin.className = "w-1/2 py-2 text-center font-bold text-blue-600 border-b-2 border-blue-600";
+                tabReg.className = "w-1/2 py-2 text-center font-bold text-gray-400 border-b-2 border-transparent hover:text-gray-600";
+            } else {
+                loginForm.classList.add('hidden');
+                regForm.classList.remove('hidden');
+                tabReg.className = "w-1/2 py-2 text-center font-bold text-blue-600 border-b-2 border-blue-600";
+                tabLogin.className = "w-1/2 py-2 text-center font-bold text-gray-400 border-b-2 border-transparent hover:text-gray-600";
+            }
+        }
+
+        function handleGateAuth(event, type) {
+            event.preventDefault();
+            if (type === 'login') {
+                const identifier = document.getElementById('gateLoginIdentifier').value.trim();
+                const password = document.getElementById('gateLoginPassword').value;
+                
+                // Поиск пользователя в базе по нику или email
+                const foundUser = registeredUsers.find(u => 
+                    (u.name.toLowerCase() === identifier.toLowerCase() || u.email.toLowerCase() === identifier.toLowerCase()) && 
+                    u.password === password
+                );
+
+                if (foundUser) {
+                    currentUser = { name: foundUser.name, email: foundUser.email };
+                } else if (registeredUsers.length === 0) {
+                    // Если база пуста (первый запуск без регистрации), пускаем по введенному нику
+                    const displayName = identifier.includes('@') ? identifier.split('@')[0] : identifier;
+                    currentUser = { name: displayName, email: identifier.includes('@') ? identifier : `${identifier}@techstore.local` };
+                } else {
+                    showToast("Неверный ник или пароль!", "error");
+                    return;
+                }
+            } else {
+                const name = document.getElementById('gateRegName').value.trim();
+                const email = document.getElementById('gateRegEmail').value.trim();
+                const password = document.getElementById('gateRegPassword').value;
+
+                // Проверка на занятость ника
+                if (registeredUsers.some(u => u.name.toLowerCase() === name.toLowerCase())) {
+                    showToast("Этот ник уже занят!", "error");
+                    return;
+                }
+
+                const newUser = { name, email, password };
+                registeredUsers.push(newUser);
+                localStorage.setItem('app_users_db', JSON.stringify(registeredUsers));
+                currentUser = { name, email };
+            }
+            localStorage.setItem('app_user', JSON.stringify(currentUser));
+            renderAuthHeader();
+            checkGateAuth();
+            showToast(`Добро пожаловать, ${currentUser.name}!`, "success");
+        }
+
+        function toggleAuthModal(show) {
+            const modal = document.getElementById('authModal');
+            if (show) modal.classList.remove('hidden');
+            else modal.classList.add('hidden');
+        }
+
+        function switchAuthTab(tab) {
+            const loginForm = document.getElementById('loginForm');
+            const regForm = document.getElementById('regForm');
+            const tabLogin = document.getElementById('authTabLogin');
+            const tabReg = document.getElementById('authTabReg');
+
+            if (tab === 'login') {
+                loginForm.classList.remove('hidden');
+                regForm.classList.add('hidden');
+                tabLogin.className = "w-1/2 py-2 text-center font-bold text-blue-600 border-b-2 border-blue-600";
+                tabReg.className = "w-1/2 py-2 text-center font-bold text-gray-400 border-b-2 border-transparent hover:text-gray-600";
+            } else {
+                loginForm.classList.add('hidden');
+                regForm.classList.remove('hidden');
+                tabReg.className = "w-1/2 py-2 text-center font-bold text-blue-600 border-b-2 border-blue-600";
+                tabLogin.className = "w-1/2 py-2 text-center font-bold text-gray-400 border-b-2 border-transparent hover:text-gray-600";
+            }
+        }
+
+        function handleAuth(event, type) {
+            event.preventDefault();
+            if (type === 'login') {
+                const identifier = document.getElementById('loginIdentifier').value.trim();
+                const password = document.getElementById('loginPassword').value;
+
+                const foundUser = registeredUsers.find(u => 
+                    (u.name.toLowerCase() === identifier.toLowerCase() || u.email.toLowerCase() === identifier.toLowerCase()) && 
+                    u.password === password
+                );
+
+                if (foundUser) {
+                    currentUser = { name: foundUser.name, email: foundUser.email };
+                } else {
+                    showToast("Неверный ник или пароль!", "error");
+                    return;
+                }
+            } else {
+                const name = document.getElementById('regName').value.trim();
+                const email = document.getElementById('regEmail').value.trim();
+                const password = document.getElementById('regPassword').value;
+
+                if (registeredUsers.some(u => u.name.toLowerCase() === name.toLowerCase())) {
+                    showToast("Этот ник уже занят!", "error");
+                    return;
+                }
+
+                registeredUsers.push({ name, email, password });
+                localStorage.setItem('app_users_db', JSON.stringify(registeredUsers));
+                currentUser = { name, email };
+            }
+            localStorage.setItem('app_user', JSON.stringify(currentUser));
+            renderAuthHeader();
+            toggleAuthModal(false);
+            showToast(`Привет, ${currentUser.name}!`, "success");
+        }
+
+        // Save products state
+        function saveProductsState() {
+            localStorage.setItem('app_products', JSON.stringify(products));
+            renderCatalog();
+            renderAdminTable();
+        }
+
+        // Save cart state
+        function saveCartState() {
+            localStorage.setItem('app_cart', JSON.stringify(cart));
+            updateCartBadge();
+            renderCartModal();
+        }
+
+        // --- THEME & LANGUAGE CONTROLLERS ---
+        function toggleTheme() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                currentTheme = 'light';
+                document.getElementById('themeIcon').className = 'fa-solid fa-moon text-lg';
+            } else {
+                document.documentElement.classList.add('dark');
+                currentTheme = 'dark';
+                document.getElementById('themeIcon').className = 'fa-solid fa-sun text-yellow-400 text-lg';
+            }
+            localStorage.setItem('app_theme', currentTheme);
+        }
+
+        function changeLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('app_lang', lang);
+            document.getElementById('langSelect').value = lang;
+            document.getElementById('welcomeLangSelect').value = lang;
+            updateLanguageUI();
+            renderCatalog();
+            renderPCBuilder();
+        }
+
+        // --- PC BUILDER MINI-GAME LOGIC ---
+        function selectBuilderSlot(slotKey) {
+            activeBuilderSlot = slotKey;
+            renderPCBuilder();
+        }
+
+        function equipPart(slotKey, partId) {
+            const part = pcBuilderCatalog[slotKey].find(p => p.id === partId);
+            if (!part) return;
+            currentBuild[slotKey] = part;
+            localStorage.setItem('app_pc_build', JSON.stringify(currentBuild));
+
+            // Advance automatically to next empty slot if available
+            const nextEmpty = builderSlotOrder.find(s => !currentBuild[s.key]);
+            if (nextEmpty) {
+                activeBuilderSlot = nextEmpty.key;
+            }
+            renderPCBuilder();
+        }
+
+        function autoBuildPC() {
+            const presets = [
+                { cpu: 'cpu_1', mb: 'mb_1', gpu: 'gpu_1', ram: 'ram_1', ssd: 'ssd_1', psu: 'psu_1' },
+                { cpu: 'cpu_2', mb: 'mb_2', gpu: 'gpu_2', ram: 'ram_2', ssd: 'ssd_2', psu: 'psu_2' },
+                { cpu: 'cpu_4', mb: 'mb_4', gpu: 'gpu_4', ram: 'ram_3', ssd: 'ssd_3', psu: 'psu_3' }
+            ];
+            const pick = presets[Math.floor(Math.random() * presets.length)];
+            Object.keys(pick).forEach(k => {
+                currentBuild[k] = pcBuilderCatalog[k].find(p => p.id === pick[k]);
+            });
+            localStorage.setItem('app_pc_build', JSON.stringify(currentBuild));
+            renderPCBuilder();
+            showToast("Автосборка готова!", "success");
+        }
+
+        function resetPCBuild() {
+            currentBuild = { cpu: null, mb: null, gpu: null, ram: null, ssd: null, psu: null };
+            localStorage.setItem('app_pc_build', JSON.stringify(currentBuild));
+            document.getElementById('stressTestPanel').classList.add('hidden');
+            activeBuilderSlot = 'cpu';
+            renderPCBuilder();
+    }
+
+    function setPCCaseColor(colorKey) {
+        if (!caseColorPresets[colorKey]) return;
+        pcCaseColor = colorKey;
+        localStorage.setItem('app_pc_case_color', colorKey);
+        apply3DCaseColors();
+        updateColorPickerUI();
+    }
+
+    function setPCRgbColor(rgbKey) {
+        if (!rgbColorPresets[rgbKey]) return;
+        pcRgbColor = rgbKey;
+        localStorage.setItem('app_pc_rgb_color', rgbKey);
+        updateColorPickerUI();
+    }
+
+    function apply3DCaseColors() {
+        if (!pc3d.initialized || !pc3d.metalDarkMat || !pc3d.metalTrimMat) return;
+        const preset = caseColorPresets[pcCaseColor] || caseColorPresets.black;
+        pc3d.metalDarkMat.color.setHex(preset.main);
+        pc3d.metalTrimMat.color.setHex(preset.trim);
+        const isLightCase = pcCaseColor === 'white' || pcCaseColor === 'silver';
+        pc3d.metalDarkMat.metalness = isLightCase ? 0.35 : 0.75;
+        pc3d.metalDarkMat.roughness = isLightCase ? 0.25 : 0.35;
+    }
+
+    function updateColorPickerUI() {
+        const caseLabelEl = document.getElementById('activeCaseColorLabel');
+        const rgbLabelEl = document.getElementById('activeRgbColorLabel');
+        if (caseLabelEl && caseColorPresets[pcCaseColor]) {
+            caseLabelEl.innerText = translations[currentLang][caseColorPresets[pcCaseColor].labelKey] || pcCaseColor;
+        }
+        if (rgbLabelEl && rgbColorPresets[pcRgbColor]) {
+            rgbLabelEl.innerText = translations[currentLang][rgbColorPresets[pcRgbColor].labelKey] || pcRgbColor;
+        }
+
+        document.querySelectorAll('#caseColorSwatches button').forEach(btn => {
+            const isSelected = btn.getAttribute('data-color') === pcCaseColor;
+            btn.classList.toggle('ring-2', isSelected);
+            btn.classList.toggle('ring-blue-500', isSelected);
+            btn.classList.toggle('scale-110', isSelected);
+        });
+
+        document.querySelectorAll('#rgbColorSwatches button').forEach(btn => {
+            const isSelected = btn.getAttribute('data-rgb') === pcRgbColor;
+            btn.classList.toggle('ring-2', isSelected);
+            btn.classList.toggle('ring-emerald-400', isSelected);
+            btn.classList.toggle('scale-110', isSelected);
+        });
+    }
+
+    // --- THREE.JS 3D PC BUILDER ENGINE ---
+    function init3DPCScene() {
+        const container = document.getElementById('pc3dCanvasContainer');
+        if (!container || typeof THREE === 'undefined' || pc3d.initialized) return;
+
+        const width = container.clientWidth || 400;
+        const height = container.clientHeight || 300;
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x090d16);
+
+        const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 100);
+        camera.position.set(3.4, 1.8, 4.1);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+        renderer.setSize(width, height);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.shadowMap.enabled = true;
+        container.innerHTML = '';
+        container.appendChild(renderer.domElement);
+
+        let controls = null;
+        if (typeof THREE.OrbitControls !== 'undefined') {
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.06;
+            controls.minDistance = 2.4;
+            controls.maxDistance = 7.5;
+            controls.target.set(0, 0.1, 0);
+        }
+
+        // Studio & Rim Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+        scene.add(ambientLight);
+
+        const keyLight = new THREE.DirectionalLight(0xffffff, 1.1);
+        keyLight.position.set(5, 7, 5);
+        scene.add(keyLight);
+
+        const fillLight = new THREE.DirectionalLight(0x60a5fa, 0.55);
+        fillLight.position.set(-5, 3, -4);
+        scene.add(fillLight);
+
+        const interiorLight = new THREE.PointLight(0x38bdf8, 1.1, 5);
+        interiorLight.position.set(0.3, 0.4, 0.4);
+        scene.add(interiorLight);
+
+        // Floor Grid Platform
+        const gridHelper = new THREE.GridHelper(8, 16, 0x1e293b, 0x111827);
+        gridHelper.position.y = -1.48;
+        scene.add(gridHelper);
+
+        // Main PC Chassis Group
+        const pcGroup = new THREE.Group();
+        scene.add(pcGroup);
+
+        const initialCase = caseColorPresets[pcCaseColor] || caseColorPresets.black;
+        const metalDark = new THREE.MeshStandardMaterial({ color: initialCase.main, metalness: 0.75, roughness: 0.35 });
+        const metalTrim = new THREE.MeshStandardMaterial({ color: initialCase.trim, metalness: 0.6, roughness: 0.4 });
+        const glassMat = new THREE.MeshPhysicalMaterial({
+            color: 0xa5f3fc,
+            transparent: true,
+            opacity: 0.14,
+            roughness: 0.1,
+            metalness: 0.1,
+            depthWrite: false
+        });
+
+        // Case Dimensions: W=1.35 (X), H=2.7 (Y), D=2.8 (Z)
+        // Bottom Panel & Feet
+        const bottomPanel = new THREE.Mesh(new THREE.BoxGeometry(1.36, 0.08, 2.82), metalDark);
+        bottomPanel.position.set(0, -1.35, 0);
+        pcGroup.add(bottomPanel);
+
+        [[-0.5, -1.1], [0.5, -1.1], [-0.5, 1.1], [0.5, 1.1]].forEach(([fx, fz]) => {
+            const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.13, 0.1, 16), metalTrim);
+            foot.position.set(fx, -1.43, fz);
+            pcGroup.add(foot);
+        });
+
+        // Top Panel & Magnetic Dust Filter
+        const topPanel = new THREE.Mesh(new THREE.BoxGeometry(1.36, 0.08, 2.82), metalDark);
+        topPanel.position.set(0, 1.35, 0);
+        pcGroup.add(topPanel);
+
+        const topMesh = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.02, 2.2), metalTrim);
+        topMesh.position.set(0, 1.4, 0);
+        pcGroup.add(topMesh);
+
+        // Back Solid Side Wall (-X)
+        const backWall = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.7, 2.8), metalDark);
+        backWall.position.set(-0.65, 0, 0);
+        pcGroup.add(backWall);
+
+        // Motherboard Tray Inside
+        const mbTray = new THREE.Mesh(new THREE.BoxGeometry(0.04, 2.55, 2.65), metalTrim);
+        mbTray.position.set(-0.48, 0.02, 0);
+        pcGroup.add(mbTray);
+
+        // Rear I/O Panel (-Z)
+        const rearWall = new THREE.Mesh(new THREE.BoxGeometry(1.34, 2.7, 0.06), metalDark);
+        rearWall.position.set(0, 0, -1.38);
+        pcGroup.add(rearWall);
+
+        // Front Mesh Bezel (+Z)
+        const frontFrame = new THREE.Mesh(new THREE.BoxGeometry(1.34, 2.7, 0.12), metalDark);
+        frontFrame.position.set(0, 0, 1.38);
+        pcGroup.add(frontFrame);
+
+        // PSU Shroud (Bottom Compartment)
+        const psuShroud = new THREE.Mesh(new THREE.BoxGeometry(1.12, 0.56, 2.68), metalDark);
+        psuShroud.position.set(-0.08, -1.03, 0);
+        pcGroup.add(psuShroud);
+
+        // Tempered Glass Side Panel (+X)
+        const glassPanel = new THREE.Mesh(new THREE.BoxGeometry(0.03, 2.58, 2.68), glassMat);
+        glassPanel.position.set(0.66, 0, 0);
+        pcGroup.add(glassPanel);
+
+        // Glass Thumb Screws
+        [[-1.2, -1.25], [-1.2, 1.25], [1.2, -1.25], [1.2, 1.25]].forEach(([sy, sz]) => {
+            const screw = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.05, 12), metalTrim);
+            screw.rotation.z = Math.PI / 2;
+            screw.position.set(0.68, sy, sz);
+            pcGroup.add(screw);
+        });
+
+        // 3 Front Intake RGB Fans + 1 Rear Exhaust Fan
+        const caseFans = [];
+        const rgbMaterials = [];
+
+        function createCaseFan(x, y, z, rotY, radius = 0.34) {
+            const fanGroup = new THREE.Group();
+            fanGroup.position.set(x, y, z);
+            fanGroup.rotation.y = rotY;
+
+            const ringMat = new THREE.MeshStandardMaterial({
+                color: 0x3b82f6,
+                emissive: 0x2563eb,
+                emissiveIntensity: 0.9,
+                roughness: 0.3
+            });
+            rgbMaterials.push(ringMat);
+
+            const ring = new THREE.Mesh(new THREE.TorusGeometry(radius, 0.035, 12, 28), ringMat);
+            fanGroup.add(ring);
+
+            const rotor = new THREE.Group();
+            const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.04, 16), metalDark);
+            hub.rotation.x = Math.PI / 2;
+            rotor.add(hub);
+
+            const bladeMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.75 });
+            for (let b = 0; b < 7; b++) {
+                const blade = new THREE.Mesh(new THREE.BoxGeometry(0.06, radius * 0.75, 0.01), bladeMat);
+                const angle = (b / 7) * Math.PI * 2;
+                blade.position.set(Math.cos(angle) * (radius * 0.45), Math.sin(angle) * (radius * 0.45), 0);
+                blade.rotation.z = angle;
+                blade.rotation.y = 0.4;
+                rotor.add(blade);
+            }
+
+            fanGroup.add(rotor);
+            pcGroup.add(fanGroup);
+            caseFans.push(rotor);
+        }
+
+        // Front 3 RGB Fans
+        [0.82, 0.05, -0.72].forEach(fy => createCaseFan(0.0, fy, 1.24, 0, 0.34));
+        // Rear Exhaust Fan
+        createCaseFan(-0.05, 0.78, -1.28, 0, 0.3);
+
+        // Dynamic Hardware Container
+        const partsGroup = new THREE.Group();
+        pcGroup.add(partsGroup);
+
+        pc3d = {
+            initialized: true,
+            scene,
+            camera,
+            renderer,
+            controls,
+            pcGroup,
+            partsGroup,
+            caseFans,
+            gpuFans: [],
+            cpuFan: null,
+            rgbMaterials,
+            interiorLight,
+            metalDarkMat: metalDark,
+            metalTrimMat: metalTrim
+        };
+
+        apply3DCaseColors();
+
+        window.addEventListener('resize', resize3DPCScene);
+
+        // Start 3D Render Loop
+        let clock = new THREE.Clock();
+        function animate3D() {
+            requestAnimationFrame(animate3D);
+            const delta = clock.getDelta();
+            const elapsed = clock.getElapsedTime();
+
+            const evalData = evaluateBuild();
+            const isBooted = evalData.isComplete && evalData.errors.length === 0;
+            const fanSpeed = isStressTesting ? 22 : isBooted ? 5.5 : 0;
+
+            if (fanSpeed > 0) {
+                pc3d.caseFans.forEach(rotor => { rotor.rotation.z += delta * fanSpeed; });
+                pc3d.gpuFans.forEach(rotor => { rotor.rotation.y += delta * (fanSpeed * 1.2); });
+                if (pc3d.cpuFan) pc3d.cpuFan.rotation.z += delta * (fanSpeed * 1.1);
+            }
+
+            // Dynamic RGB Color Sync (User Preset or Seasonal/Status Auto)
+            const selectedRgb = rgbColorPresets[pcRgbColor] || rgbColorPresets.auto;
+            const emissivePower = isBooted ? (isStressTesting ? 1.5 : 0.95) : (pcRgbColor !== 'auto' ? 0.55 : 0.15);
+
+            if (selectedRgb.hex === 'rainbow') {
+                const hue = (elapsed * 0.25) % 1;
+                pc3d.rgbMaterials.forEach((mat, idx) => {
+                    const itemHue = (hue + idx * 0.08) % 1;
+                    mat.color.setHSL(itemHue, 0.9, 0.55);
+                    mat.emissive.setHSL(itemHue, 0.9, 0.5);
+                    mat.emissiveIntensity = emissivePower;
+                });
+                pc3d.interiorLight.color.setHSL(hue, 0.9, 0.55);
+            } else {
+                let targetColor = selectedRgb.hex;
+                if (targetColor === null) {
+                    targetColor = 0x3b82f6; // Default Blue
+                    if (!isBooted) {
+                        targetColor = evalData.errors.length > 0 ? 0xef4444 : 0x334155;
+                    } else if (isWinterMode) {
+                        targetColor = 0x38bdf8; // Ice Cyan
+                    } else if (isHalloweenMode) {
+                        targetColor = 0xf97316; // Spooky Orange
+                    } else if (isStressTesting) {
+                        targetColor = 0x10b981; // Emerald Turbo
+                    }
+                }
+                pc3d.rgbMaterials.forEach(mat => {
+                    mat.color.setHex(targetColor);
+                    mat.emissive.setHex(targetColor);
+                    mat.emissiveIntensity = emissivePower;
+                });
+                pc3d.interiorLight.color.setHex(targetColor);
+            }
+            pc3d.interiorLight.intensity = isBooted ? 1.3 : (pcRgbColor !== 'auto' ? 0.7 : 0.25);
+
+            if (pc3d.controls) pc3d.controls.update();
+            pc3d.renderer.render(pc3d.scene, pc3d.camera);
+        }
+        animate3D();
+    }
+
+    function resize3DPCScene() {
+        const container = document.getElementById('pc3dCanvasContainer');
+        if (!pc3d.initialized || !container) return;
+        const w = container.clientWidth;
+        const h = container.clientHeight;
+        if (w > 0 && h > 0) {
+            pc3d.camera.aspect = w / h;
+            pc3d.camera.updateProjectionMatrix();
+            pc3d.renderer.setSize(w, h);
+        }
+    }
+
+    function reset3DCamera() {
+        if (!pc3d.initialized) return;
+        pc3d.camera.position.set(3.4, 1.8, 4.1);
+        if (pc3d.controls) {
+            pc3d.controls.target.set(0, 0.1, 0);
+            pc3d.controls.update();
+        }
+    }
+
+    function update3DPCComponents() {
+        if (!pc3d.initialized) return;
+
+        // Clear previously built 3D hardware meshes
+        while (pc3d.partsGroup.children.length > 0) {
+            pc3d.partsGroup.remove(pc3d.partsGroup.children[0]);
+        }
+        pc3d.gpuFans = [];
+        pc3d.cpuFan = null;
+        // Keep only the 4 base case fan RGB materials
+        pc3d.rgbMaterials = pc3d.rgbMaterials.slice(0, 4);
+
+        const pcbMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.5, metalness: 0.3 });
+        const silverMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.85, roughness: 0.25 });
+        const darkMetal = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.7, roughness: 0.35 });
+        const goldMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.9, roughness: 0.2 });
+
+        // 1. MOTHERBOARD (MB)
+        if (currentBuild.mb) {
+            const isATX = currentBuild.mb.tier === 'Pro' || currentBuild.mb.tier === 'Flagship';
+            const mbHeight = isATX ? 1.75 : 1.35;
+            const mbDepth = isATX ? 1.45 : 1.25;
+
+            const mbBoard = new THREE.Mesh(new THREE.BoxGeometry(0.05, mbHeight, mbDepth), pcbMat);
+            mbBoard.position.set(-0.43, 0.35, -0.35);
+            pc3d.partsGroup.add(mbBoard);
+
+            // VRM Heatsinks & I/O Cover
+            const vrmSink = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.55, 0.25), silverMat);
+            vrmSink.position.set(-0.36, 0.82, -0.92);
+            pc3d.partsGroup.add(vrmSink);
+
+            // Chipset Heatsink with RGB accent
+            const chipset = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.32, 0.38), darkMetal);
+            chipset.position.set(-0.38, -0.15, -0.15);
+            pc3d.partsGroup.add(chipset);
+
+            const mbRgbMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, emissive: 0x3b82f6, emissiveIntensity: 1 });
+            pc3d.rgbMaterials.push(mbRgbMat);
+            const mbStrip = new THREE.Mesh(new THREE.BoxGeometry(0.02, mbHeight * 0.85, 0.03), mbRgbMat);
+            mbStrip.position.set(-0.40, 0.35, 0.36);
+            pc3d.partsGroup.add(mbStrip);
+        }
+
+        // 2. CPU & COOLER / AIO PUMP
+        if (currentBuild.cpu) {
+            const isHighEnd = currentBuild.cpu.tier === 'Pro' || currentBuild.cpu.tier === 'Flagship';
+
+            // CPU IHS Chip
+            const cpuIHS = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.24, 0.24), silverMat);
+            cpuIHS.position.set(-0.38, 0.68, -0.52);
+            pc3d.partsGroup.add(cpuIHS);
+
+            if (isHighEnd) {
+                // Liquid AIO Pump Block + Top Radiator & Tubes
+                const pumpMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, emissive: 0x3b82f6, emissiveIntensity: 1 });
+                pc3d.rgbMaterials.push(pumpMat);
+
+                const pumpBody = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.18, 24), darkMetal);
+                pumpBody.rotation.z = Math.PI / 2;
+                pumpBody.position.set(-0.27, 0.68, -0.52);
+                pc3d.partsGroup.add(pumpBody);
+
+                const pumpCap = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.03, 24), pumpMat);
+                pumpCap.rotation.z = Math.PI / 2;
+                pumpCap.position.set(-0.17, 0.68, -0.52);
+                pc3d.partsGroup.add(pumpCap);
+
+                // Top 360mm Radiator
+                const radiator = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.12, 2.1), darkMetal);
+                radiator.position.set(-0.05, 1.24, -0.05);
+                pc3d.partsGroup.add(radiator);
+
+                // AIO Cooling Tubes
+                const tube1 = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.72, 12), darkMetal);
+                tube1.position.set(-0.12, 0.95, -0.18);
+                tube1.rotation.x = 0.55;
+                pc3d.partsGroup.add(tube1);
+
+                const tube2 = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.72, 12), darkMetal);
+                tube2.position.set(-0.06, 0.95, -0.12);
+                tube2.rotation.x = 0.55;
+                pc3d.partsGroup.add(tube2);
+            } else {
+                // Tower Air Cooler with Spinning RGB Fan
+                const heatsink = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.42, 0.36), silverMat);
+                heatsink.position.set(-0.18, 0.68, -0.52);
+                pc3d.partsGroup.add(heatsink);
+
+                const fanRgbMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, emissive: 0x3b82f6, emissiveIntensity: 0.9 });
+                pc3d.rgbMaterials.push(fanRgbMat);
+
+                const coolerFan = new THREE.Group();
+                coolerFan.position.set(-0.18, 0.68, -0.32);
+                const ring = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.02, 10, 20), fanRgbMat);
+                coolerFan.add(ring);
+
+                const blades = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.04, 0.02), darkMetal);
+                coolerFan.add(blades);
+                pc3d.partsGroup.add(coolerFan);
+                pc3d.cpuFan = coolerFan;
+            }
+        }
+
+        // 3. RAM STICKS (2 or 4 RGB Modules)
+        if (currentBuild.ram) {
+            const stickCount = currentBuild.ram.id === 'ram_1' ? 2 : 4;
+            const ramRgbMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, emissive: 0x3b82f6, emissiveIntensity: 1.1 });
+            pc3d.rgbMaterials.push(ramRgbMat);
+
+            for (let i = 0; i < stickCount; i++) {
+                const zPos = -0.14 + i * 0.075;
+                const stick = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.52, 0.025), darkMetal);
+                stick.position.set(-0.33, 0.68, zPos);
+                pc3d.partsGroup.add(stick);
+
+                const rgbBar = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.52, 0.026), ramRgbMat);
+                rgbBar.position.set(-0.245, 0.68, zPos);
+                pc3d.partsGroup.add(rgbBar);
+            }
+        }
+
+        // 4. M.2 NVMe SSD
+        if (currentBuild.ssd) {
+            const ssdBody = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.11, 0.44), darkMetal);
+            ssdBody.position.set(-0.38, 0.25, -0.55);
+            pc3d.partsGroup.add(ssdBody);
+
+            const ssdAccent = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.03, 0.38), goldMat);
+            ssdAccent.position.set(-0.38, 0.27, -0.55);
+            pc3d.partsGroup.add(ssdAccent);
+        }
+
+        // 5. GRAPHICS CARD (GPU) - Scales by Tier (Dual vs Triple Fan)
+        if (currentBuild.gpu) {
+            const isMassive = currentBuild.gpu.tier === 'Pro' || currentBuild.gpu.tier === 'Flagship';
+            const gpuLen = isMassive ? 1.55 : 1.15;
+            const gpuHeight = isMassive ? 0.24 : 0.16;
+            const gpuWidth = isMassive ? 0.58 : 0.46;
+
+            const gpuGroup = new THREE.Group();
+            gpuGroup.position.set(-0.14, 0.02, -0.35 + (gpuLen - 1.15) * 0.35);
+
+            // Shroud Body
+            const shroud = new THREE.Mesh(new THREE.BoxGeometry(gpuWidth, gpuHeight, gpuLen), darkMetal);
+            gpuGroup.add(shroud);
+
+            // Metallic Backplate
+            const backplate = new THREE.Mesh(new THREE.BoxGeometry(gpuWidth + 0.01, 0.02, gpuLen + 0.01), silverMat);
+            backplate.position.y = gpuHeight / 2 + 0.01;
+            gpuGroup.add(backplate);
+
+            // Side RGB Logo Bar facing Tempered Glass
+            const gpuRgbMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, emissive: 0x3b82f6, emissiveIntensity: 1.2 });
+            pc3d.rgbMaterials.push(gpuRgbMat);
+            const sideLed = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.045, gpuLen * 0.78), gpuRgbMat);
+            sideLed.position.set(gpuWidth / 2 + 0.005, 0.02, 0);
+            gpuGroup.add(sideLed);
+
+            // Bottom GPU Cooling Fans (2 or 3 fans)
+            const fanCount = isMassive ? 3 : 2;
+            const spacing = gpuLen / (fanCount + 0.4);
+            for (let f = 0; f < fanCount; f++) {
+                const fz = -((fanCount - 1) * spacing) / 2 + f * spacing;
+                const gFan = new THREE.Group();
+                gFan.position.set(0, -gpuHeight / 2 - 0.005, fz);
+
+                const fRing = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.015, 16), gpuRgbMat);
+                gFan.add(fRing);
+                const fBlade = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.02, 0.04), darkMetal);
+                gFan.add(fBlade);
+
+                gpuGroup.add(gFan);
+                pc3d.gpuFans.push(gFan);
+            }
+
+            pc3d.partsGroup.add(gpuGroup);
+        }
+
+        // 6. POWER SUPPLY UNIT (PSU)
+        if (currentBuild.psu) {
+            const psuBox = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.44, 0.78), darkMetal);
+            psuBox.position.set(-0.08, -1.04, -0.88);
+            pc3d.partsGroup.add(psuBox);
+
+            const psuBadgeMat = new THREE.MeshStandardMaterial({
+                color: currentBuild.psu.tier === 'Flagship' ? 0xfacc15 : 0x38bdf8,
+                emissive: currentBuild.psu.tier === 'Flagship' ? 0xeab308 : 0x0284c7,
+                emissiveIntensity: 0.7
+            });
+            const psuLabel = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.22, 0.48), psuBadgeMat);
+            psuLabel.position.set(0.29, -1.04, -0.88);
+            pc3d.partsGroup.add(psuLabel);
+        }
+    }
+
+    function evaluateBuild() {
+            const parts = Object.values(currentBuild).filter(Boolean);
+            const isComplete = parts.length === 6;
+            const totalPrice = parts.reduce((sum, p) => sum + p.price, 0);
+            const usedWatts = ['cpu', 'mb', 'gpu', 'ram', 'ssd'].reduce((sum, k) => sum + (currentBuild[k] ? currentBuild[k].watts : 0), 0);
+            const psuWatts = currentBuild.psu ? currentBuild.psu.watts : 0;
+
+            let errors = [];
+            if (currentBuild.cpu && currentBuild.mb && currentBuild.cpu.socket !== currentBuild.mb.socket) {
+                errors.push(translations[currentLang].build_err_socket);
+            }
+            if (currentBuild.psu && usedWatts > psuWatts) {
+                errors.push(`${translations[currentLang].build_err_psu} (${usedWatts}W / ${psuWatts}W)`);
+            }
+
+            const totalScore = parts.reduce((sum, p) => sum + p.score, 0);
+            return { isComplete, totalPrice, usedWatts, psuWatts, errors, totalScore };
+        }
+
+        function renderPCBuilder() {
+            const slotsContainer = document.getElementById('pcCaseSlots');
+            const tabsContainer = document.getElementById('builderSlotTabs');
+            const partsContainer = document.getElementById('builderPartsList');
+            if (!slotsContainer || !tabsContainer || !partsContainer) return;
+
+            const evalData = evaluateBuild();
+            const isValidBoot = evalData.isComplete && evalData.errors.length === 0;
+
+            // Update Case Glow & Fans
+            const caseBox = document.getElementById('pcCaseContainer');
+            const powerLed = document.getElementById('pcPowerLed');
+            const fans = [document.getElementById('caseFan1'), document.getElementById('caseFan2'), document.getElementById('caseFan3')];
+            const stateTag3D = document.getElementById('pc3dStateTag');
+
+            if (isValidBoot) {
+                caseBox.classList.add('rgb-case-active');
+                powerLed.className = "w-3 h-3 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/80";
+                if (stateTag3D) {
+                    stateTag3D.innerText = isStressTesting ? "TURBO LOAD 100%" : "SYSTEM ONLINE";
+                    stateTag3D.className = "bg-emerald-950/80 backdrop-blur px-2.5 py-1 rounded-lg border border-emerald-500/40 font-mono text-emerald-400";
+                }
+                fans.forEach(f => {
+                    f.className = `fa-solid fa-fan text-emerald-400 text-lg ${isStressTesting ? 'fan-spin-turbo' : 'fan-spin-idle'}`;
+                });
+            } else {
+                caseBox.classList.remove('rgb-case-active');
+                powerLed.className = evalData.errors.length ? "w-3 h-3 rounded-full bg-red-500" : "w-3 h-3 rounded-full bg-slate-600";
+                if (stateTag3D) {
+                    stateTag3D.innerText = evalData.errors.length ? "COMPATIBILITY ERR" : "STANDBY";
+                    stateTag3D.className = evalData.errors.length
+                        ? "bg-red-950/80 backdrop-blur px-2.5 py-1 rounded-lg border border-red-500/40 font-mono text-red-400"
+                        : "bg-slate-900/75 backdrop-blur px-2.5 py-1 rounded-lg border border-slate-800 font-mono text-slate-300";
+                }
+                fans.forEach(f => {
+                    f.className = "fa-solid fa-fan text-slate-500 text-lg";
+                });
+            }
+            // Sync 3D Hardware Models inside Case & Color Swatches
+            update3DPCComponents();
+            updateColorPickerUI();
+
+            // 1. Render Visual Case Slots
+            slotsContainer.innerHTML = builderSlotOrder.map(slot => {
+                const installed = currentBuild[slot.key];
+                const isSelected = activeBuilderSlot === slot.key;
+                const borderStyle = isSelected
+                    ? 'border-emerald-400 bg-slate-800/90 ring-2 ring-emerald-400/30'
+                    : installed
+                    ? 'border-blue-500/50 bg-slate-800/70'
+                    : 'border-dashed border-slate-700 bg-slate-800/30 hover:border-slate-500';
+
+                return `
+                    <div onclick="selectBuilderSlot('${slot.key}')" class="cursor-pointer p-3 rounded-2xl border transition-all flex flex-col justify-between min-h-[82px] ${borderStyle}">
+                        <div class="flex items-center justify-between text-[11px] text-slate-400">
+                            <span class="font-semibold flex items-center gap-1.5">
+                                <i class="fa-solid ${slot.icon} ${installed ? 'text-emerald-400' : 'text-slate-500'}"></i>
+                                ${translations[currentLang][slot.labelKey]}
+                            </span>
+                            ${installed ? `<span class="text-emerald-400 font-bold">$${installed.price}</span>` : ''}
+                        </div>
+                        <div class="mt-1.5 text-xs font-bold truncate ${installed ? 'text-white' : 'text-slate-500 italic'}">
+                            ${installed ? installed.name : translations[currentLang].slot_empty}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // 2. Render Compatibility & Wattage Box
+            const statusBox = document.getElementById('buildStatusBox');
+            let statusHtml = `
+                <div class="flex justify-between items-center text-slate-300">
+                    <span><i class="fa-solid fa-bolt text-amber-400 mr-1"></i> Power: <b>${evalData.usedWatts}W</b> / ${evalData.psuWatts || 0}W</span>
+                    <span>Score: <b class="text-emerald-400">${evalData.totalScore} pts</b></span>
+                </div>
+            `;
+            if (evalData.errors.length > 0) {
+                statusHtml += evalData.errors.map(err => `<div class="text-red-400 font-semibold flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation"></i> ${err}</div>`).join('');
+            } else if (evalData.isComplete) {
+                statusHtml += `<div class="text-emerald-400 font-semibold flex items-center gap-1.5"><i class="fa-solid fa-circle-check"></i> ${translations[currentLang].build_ok}</div>`;
+            } else {
+                statusHtml += `<div class="text-slate-400 flex items-center gap-1.5"><i class="fa-solid fa-circle-info"></i> ${translations[currentLang].build_incomplete}</div>`;
+            }
+            statusBox.innerHTML = statusHtml;
+
+            // 3. Update FPS & Rank Gauges
+            const cpuScore = currentBuild.cpu ? currentBuild.cpu.score : 0;
+            const gpuScore = currentBuild.gpu ? currentBuild.gpu.score : 0;
+            const ramBonus = currentBuild.ram ? currentBuild.ram.score * 0.4 : 0;
+            const gamingPower = (gpuScore * 0.65 + cpuScore * 0.35 + ramBonus);
+
+            const cs2 = isValidBoot ? Math.round(gamingPower * 3.8) : 0;
+            const cp2077 = isValidBoot ? Math.round(gamingPower * 1.35) : 0;
+            const rdr2 = isValidBoot ? Math.round(gamingPower * 1.55) : 0;
+
+            document.getElementById('fpsCs2').innerText = `${cs2} FPS`;
+            document.getElementById('barCs2').style.width = `${Math.min(100, (cs2 / 400) * 100)}%`;
+
+            document.getElementById('fpsCp').innerText = `${cp2077} FPS`;
+            document.getElementById('barCp').style.width = `${Math.min(100, (cp2077 / 150) * 100)}%`;
+
+            document.getElementById('fpsRdr').innerText = `${rdr2} FPS`;
+            document.getElementById('barRdr').style.width = `${Math.min(100, (rdr2 / 170) * 100)}%`;
+
+            const rankBadge = document.getElementById('buildRankBadge');
+            if (!isValidBoot) {
+                rankBadge.innerText = 'N/A';
+                rankBadge.className = "px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-gray-300";
+            } else if (evalData.totalScore >= 260) {
+                rankBadge.innerText = 'S-TIER GODLIKE';
+                rankBadge.className = "px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-amber-500/20 text-amber-400 border border-amber-500/40";
+            } else if (evalData.totalScore >= 190) {
+                rankBadge.innerText = 'A-TIER PRO';
+                rankBadge.className = "px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40";
+            } else {
+                rankBadge.innerText = 'B-TIER STARTER';
+                rankBadge.className = "px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-blue-500/20 text-blue-400 border border-blue-500/40";
+            }
+
+            document.getElementById('buildTotalPrice').innerText = `$${evalData.totalPrice}`;
+
+            // 4. Render Slot Tabs
+            const activeIdx = builderSlotOrder.findIndex(s => s.key === activeBuilderSlot);
+            document.getElementById('slotStepIndicator').innerText = `${activeIdx + 1} / 6`;
+            document.getElementById('activeSlotHeading').innerText = translations[currentLang][builderSlotOrder[activeIdx].labelKey];
+
+            tabsContainer.innerHTML = builderSlotOrder.map(slot => {
+                const isActive = slot.key === activeBuilderSlot;
+                const isDone = Boolean(currentBuild[slot.key]);
+                return `
+                    <button onclick="selectBuilderSlot('${slot.key}')" class="shrink-0 px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${isActive ? 'bg-emerald-600 text-white shadow-md' : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200'}">
+                        <i class="fa-solid ${slot.icon}"></i>
+                        <span>${translations[currentLang][slot.labelKey]}</span>
+                        ${isDone ? '<i class="fa-solid fa-check text-[10px] text-emerald-300"></i>' : ''}
+                    </button>
+                `;
+            }).join('');
+
+            // 5. Render Parts for Active Slot
+            const options = pcBuilderCatalog[activeBuilderSlot] || [];
+            partsContainer.innerHTML = options.map(part => {
+                const isEquipped = currentBuild[activeBuilderSlot]?.id === part.id;
+                let socketWarn = false;
+                if (activeBuilderSlot === 'mb' && currentBuild.cpu && part.socket !== currentBuild.cpu.socket) socketWarn = true;
+                if (activeBuilderSlot === 'cpu' && currentBuild.mb && part.socket !== currentBuild.mb.socket) socketWarn = true;
+
+                return `
+                    <div onclick="equipPart('${activeBuilderSlot}', '${part.id}')" class="cursor-pointer p-4 rounded-2xl border transition-all flex flex-col justify-between space-y-3 ${isEquipped ? 'border-emerald-500 bg-emerald-500/10 ring-2 ring-emerald-500/20' : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-900/60 hover:border-blue-500'}">
+                        <div class="space-y-1">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-500">${part.tier}</span>
+                                <span class="text-xs font-mono text-gray-400">${part.watts}W</span>
+                            </div>
+                            <h4 class="font-bold text-sm">${part.name}</h4>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">${part.spec}</p>
+                            ${socketWarn ? `<p class="text-[11px] text-red-400 font-semibold"><i class="fa-solid fa-circle-exclamation"></i> Socket ${part.socket}</p>` : ''}
+                        </div>
+                        <div class="flex items-center justify-between pt-2 border-t border-gray-200/60 dark:border-gray-700/60">
+                            <span class="font-extrabold text-sm text-emerald-500">$${part.price}</span>
+                            <span class="text-xs font-semibold ${isEquipped ? 'text-emerald-500' : 'text-blue-500'}">
+                                ${isEquipped ? '<i class="fa-solid fa-circle-check"></i> OK' : '+ Выбрать'}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function runStressTest() {
+            const evalData = evaluateBuild();
+            if (!evalData.isComplete) {
+                showToast(translations[currentLang].build_incomplete, "error");
+                return;
+            }
+            if (evalData.errors.length > 0) {
+                showToast(evalData.errors[0], "error");
+                return;
+            }
+            if (isStressTesting) return;
+
+            isStressTesting = true;
+            renderPCBuilder();
+
+            const panel = document.getElementById('stressTestPanel');
+            const bar = document.getElementById('stressProgressBar');
+            const statusText = document.getElementById('stressStatusText');
+            const tempText = document.getElementById('stressTempText');
+            const rewardBox = document.getElementById('stressRewardBox');
+
+            panel.classList.remove('hidden');
+            rewardBox.classList.add('hidden');
+            let progress = 0;
+
+            const timer = setInterval(() => {
+                progress += 10;
+                const temp = 42 + Math.round((progress / 100) * (25 + evalData.usedWatts / 30));
+                bar.style.width = `${progress}%`;
+                statusText.innerText = `Stress Test: ${progress}%`;
+                tempText.innerText = `${temp}°C`;
+
+                if (progress >= 100) {
+                    clearInterval(timer);
+                    isStressTesting = false;
+                    renderPCBuilder();
+                    statusText.innerText = "Benchmark Passed! 100% Stable";
+                    lastGeneratedPromo = evalData.totalScore >= 260 ? "GODLIKE15" : "PCBUILD10";
+                    document.getElementById('stressRewardText').innerText = `🎁 Promo Code: ${lastGeneratedPromo}`;
+                    rewardBox.classList.remove('hidden');
+                    showToast(`Тест пройден! Промокод: ${lastGeneratedPromo}`, "success");
+                }
+            }, 220);
+        }
+
+        function copyPromoCode() {
+            const tempInput = document.createElement('input');
+            tempInput.value = lastGeneratedPromo;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+            showToast(`Промокод ${lastGeneratedPromo} скопирован!`, "success");
+        }
+
+        function addBuildToCart() {
+            const parts = Object.values(currentBuild).filter(Boolean);
+            if (parts.length === 0) {
+                showToast(translations[currentLang].build_incomplete, "error");
+                return;
+            }
+
+            parts.forEach(part => {
+                let storeProd = products.find(p => p.name === part.name);
+                if (!storeProd) {
+                    const newId = products.length ? Math.max(...products.map(p => p.id)) + 1 : 100;
+                    storeProd = {
+                        id: newId,
+                        name: part.name,
+                        category: 'components',
+                        price: part.price,
+                        image: 'https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=500&auto=format&fit=crop&q=60',
+                        desc: part.spec
+                    };
+                    products.push(storeProd);
+                }
+
+                const existing = cart.find(item => item.id === storeProd.id);
+                if (existing) {
+                    existing.qty++;
+                } else {
+                    cart.push({ id: storeProd.id, qty: 1 });
+                }
+            });
+
+            saveProductsState();
+            saveCartState();
+            const caseColorText = translations[currentLang][caseColorPresets[pcCaseColor]?.labelKey || 'color_black'];
+            const rgbColorText = translations[currentLang][rgbColorPresets[pcRgbColor]?.labelKey || 'rgb_auto'];
+            showToast(`${translations[currentLang].build_added_cart} (${caseColorText} • RGB: ${rgbColorText})`, "success");
+            toggleCartModal(true);
+        }
+
+        function renderCatalog() {
+            const grid = document.getElementById('productsGrid');
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            
+            const filtered = products.filter(p => {
+                const matchesCategory = activeCategory === 'all' || p.category === activeCategory;
+                const matchesSearch = p.name.toLowerCase().includes(search) || p.desc.toLowerCase().includes(search);
+                return matchesCategory && matchesSearch;
+            });
+
+            const cardThemeClasses = isHalloweenMode 
+                ? "bg-white dark:bg-slate-800 rounded-3xl overflow-hidden border border-orange-500/40 shadow-sm spooky-card hover:border-orange-500 transition-all duration-300 flex flex-col group"
+                : isWinterMode 
+                ? "bg-white dark:bg-slate-800 rounded-3xl overflow-hidden border border-cyan-500/30 shadow-sm hover:shadow-cyan-500/20 hover:shadow-xl transition-all duration-300 flex flex-col group"
+                : "bg-white dark:bg-slate-800 rounded-3xl overflow-hidden border border-gray-100 dark:border-gray-700/60 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col group";
+
+            const btnThemeClasses = isHalloweenMode
+                ? "w-full py-2.5 bg-orange-50 hover:bg-orange-600 dark:bg-slate-700 dark:hover:bg-orange-600 text-orange-600 dark:text-orange-400 hover:text-white rounded-xl text-xs font-semibold transition-all flex items-center justify-center space-x-2"
+                : isWinterMode
+                ? "w-full py-2.5 bg-cyan-50 hover:bg-cyan-600 dark:bg-slate-700 dark:hover:bg-cyan-600 text-cyan-600 dark:text-cyan-300 hover:text-white rounded-xl text-xs font-semibold transition-all flex items-center justify-center space-x-2"
+                : "w-full py-2.5 bg-blue-50 hover:bg-blue-600 dark:bg-slate-700 dark:hover:bg-blue-600 text-blue-600 dark:text-blue-300 hover:text-white rounded-xl text-xs font-semibold transition-all flex items-center justify-center space-x-2";
+
+            grid.innerHTML = filtered.map(product => `
+                <div class="${cardThemeClasses}">
+                    <div class="relative h-48 overflow-hidden bg-gray-100 dark:bg-slate-900">
+                        <img src="${product.image}" alt="${product.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onerror="this.src='https://placehold.co/500x300/1e293b/white?text=No+Image'">
+                        <span class="absolute top-3 right-3 ${isHalloweenMode ? 'bg-orange-600/90' : isWinterMode ? 'bg-cyan-600/90' : 'bg-slate-900/80'} backdrop-blur text-white text-xs px-2.5 py-1 rounded-full font-semibold">
+                            $${product.price}
+                        </span>
+                    </div>
+                    <div class="p-5 flex flex-col flex-grow justify-between space-y-4">
+                        <div>
+                            <h3 class="font-bold text-base line-clamp-1">${product.name}</h3>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">${product.desc}</p>
+                        </div>
+                        <button onclick="addToCart(${product.id})" class="${btnThemeClasses}">
+                            <i class="fa-solid fa-cart-plus"></i>
+                            <span>${translations[currentLang].btn_add_to_cart}</span>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderAuthHeader() {
+            const authArea = document.getElementById('authArea');
+            if (currentUser) {
+                authArea.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <div class="text-right hidden sm:block">
+                            <div class="text-xs font-semibold">${currentUser.name}</div>
+                            <div class="text-[10px] text-gray-400">${currentUser.email}</div>
+                        </div>
+                        <button onclick="logout()" class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-slate-800 rounded-lg text-sm" title="${translations[currentLang].btn_logout}">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                        </button>
+                    </div>
+                `;
+            } else {
+                authArea.innerHTML = `
+                    <button onclick="toggleAuthModal(true)" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-md transition-all">
+                        ${translations[currentLang].auth_tab_login}
+                    </button>
+                `;
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            localStorage.removeItem('app_user');
+            renderAuthHeader();
+            checkGateAuth();
+            showToast("Вы вышли из аккаунта", "info");
+        }
+
+        // --- CART & ABOUT MODAL SYSTEM ---
+        function toggleAboutModal(show) {
+            const modal = document.getElementById('aboutModal');
+            if (show) modal.classList.remove('hidden');
+            else modal.classList.add('hidden');
+        }
+
+        function toggleCartModal(show) {
+            const modal = document.getElementById('cartModal');
+            if (show) {
+                renderCartModal();
+                modal.classList.remove('hidden');
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+
+        function addToCart(productId) {
+            const existing = cart.find(item => item.id === productId);
+            if (existing) {
+                existing.qty++;
+            } else {
+                cart.push({ id: productId, qty: 1 });
+            }
+            saveCartState();
+            showToast("Товар добавлен в корзину!", "success");
+        }
+
+        function updateQty(productId, delta) {
+            const item = cart.find(i => i.id === productId);
+            if (item) {
+                item.qty += delta;
+                if (item.qty <= 0) {
+                    cart = cart.filter(i => i.id !== productId);
+                }
+            }
+            saveCartState();
+        }
+
+        function updateCartBadge() {
+            const count = cart.reduce((sum, item) => sum + item.qty, 0);
+            document.getElementById('cartCount').innerText = count;
+        }
+
+        function renderCartModal() {
+            const container = document.getElementById('cartItemsList');
+            const deliverySection = document.getElementById('deliverySection');
+            let total = 0;
+
+            if (cart.length === 0) {
+                container.innerHTML = `<p class="text-center text-gray-400 py-8">${translations[currentLang].empty_cart}</p>`;
+                deliverySection.classList.add('hidden');
+                document.getElementById('cartTotal').innerText = '$0';
+                return;
+            }
+
+            deliverySection.classList.remove('hidden');
+
+            container.innerHTML = cart.map(item => {
+                const prod = products.find(p => p.id === item.id);
+                if (!prod) return '';
+                const itemTotal = prod.price * item.qty;
+                total += itemTotal;
+
+                return `
+                    <div class="flex items-center space-x-4 bg-gray-50 dark:bg-slate-900/50 p-3 rounded-2xl border border-gray-100 dark:border-gray-700/50">
+                        <img src="${prod.image}" class="w-16 h-16 rounded-xl object-cover bg-white" onerror="this.src='https://placehold.co/100/1e293b/white?text=Tech'">
+                        <div class="flex-grow">
+                            <h4 class="font-semibold text-sm line-clamp-1">${prod.name}</h4>
+                            <span class="text-xs text-gray-400">$${prod.price}</span>
+                            <div class="flex items-center space-x-2 mt-2">
+                                <button onclick="updateQty(${prod.id}, -1)" class="w-6 h-6 rounded-lg bg-gray-200 dark:bg-slate-700 flex items-center justify-center text-xs font-bold">-</button>
+                                <span class="text-xs font-bold">${item.qty}</span>
+                                <button onclick="updateQty(${prod.id}, 1)" class="w-6 h-6 rounded-lg bg-gray-200 dark:bg-slate-700 flex items-center justify-center text-xs font-bold">+</button>
+                            </div>
+                        </div>
+                        <span class="font-bold text-sm text-blue-500">$${itemTotal}</span>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('cartTotal').innerText = `$${total.toFixed(2)}`;
+        }
+
+        function checkout() {
+            if (cart.length === 0) return;
+
+            const locationVal = document.getElementById('orderLocation').value.trim();
+            if (!locationVal) {
+                showToast(translations[currentLang].deliv_err_loc, "error");
+                document.getElementById('orderLocation').focus();
+                return;
+            }
+
+            const serviceEl = document.getElementById('orderService');
+            const serviceName = serviceEl.options[serviceEl.selectedIndex].text;
+            const methodVal = document.querySelector('input[name="deliveryMethod"]:checked').value;
+            const methodLabel = methodVal === 'door' ? translations[currentLang].deliv_door : translations[currentLang].deliv_postamat;
+
+            cart = [];
+            document.getElementById('orderLocation').value = '';
+            saveCartState();
+            toggleCartModal(false);
+            showToast(`${translations[currentLang].order_success} (${locationVal} • ${methodLabel} • ${serviceName})`, "success");
+        }
+
+        // --- ADMIN / EDIT PRODUCT PANEL ---
+        function renderAdminTable() {
+            const tbody = document.getElementById('adminTableBody');
+            tbody.innerHTML = products.map(prod => `
+                <tr class="hover:bg-gray-50 dark:hover:bg-slate-700/30 transition-colors">
+                    <td class="p-4 flex items-center space-x-3">
+                        <img src="${prod.image}" class="w-10 h-10 rounded-lg object-cover" onerror="this.src='https://placehold.co/100/1e293b/white?text=Tech'">
+                        <div>
+                            <div class="font-semibold text-sm">${prod.name}</div>
+                            <div class="text-xs text-gray-400 line-clamp-1 max-w-xs">${prod.desc}</div>
+                        </div>
+                    </td>
+                    <td class="p-4 text-xs font-medium text-gray-500">${prod.category}</td>
+                    <td class="p-4 font-bold text-sm">$${prod.price}</td>
+                    <td class="p-4 text-right space-x-2">
+                        <button onclick="openProductModal(${prod.id})" class="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-slate-700 rounded-lg">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                        <button onclick="deleteProduct(${prod.id})" class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-slate-700 rounded-lg">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function openProductModal(productId = null) {
+            const modal = document.getElementById('productModal');
+            const title = document.getElementById('productModalTitle');
+
+            if (productId) {
+                const prod = products.find(p => p.id === productId);
+                title.innerText = translations[currentLang].modal_add_title;
+                document.getElementById('prodId').value = prod.id;
+                document.getElementById('prodName').value = prod.name;
+                document.getElementById('prodPrice').value = prod.price;
+                document.getElementById('prodCategory').value = prod.category;
+                document.getElementById('prodImage').value = prod.image;
+                document.getElementById('prodDesc').value = prod.desc;
+            } else {
+                title.innerText = translations[currentLang].admin_add_btn;
+                document.getElementById('productForm').reset();
+                document.getElementById('prodId').value = '';
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeProductModal() {
+            document.getElementById('productModal').classList.add('hidden');
+        }
+
+        function saveProduct(event) {
+            event.preventDefault();
+            const id = document.getElementById('prodId').value;
+            const name = document.getElementById('prodName').value;
+            const price = parseFloat(document.getElementById('prodPrice').value);
+            const category = document.getElementById('prodCategory').value;
+            const image = document.getElementById('prodImage').value;
+            const desc = document.getElementById('prodDesc').value;
+
+            if (id) {
+                // Edit
+                const index = products.findIndex(p => p.id == id);
+                if (index !== -1) {
+                    products[index] = { id: parseInt(id), name, price, category, image, desc };
+                }
+            } else {
+                // Add new
+                const newId = products.length ? Math.max(...products.map(p => p.id)) + 1 : 1;
+                products.push({ id: newId, name, price, category, image, desc });
+            }
+
+            saveProductsState();
+            closeProductModal();
+            showToast("Товар успешно сохранен!", "success");
+        }
+
+        function deleteProduct(id) {
+            products = products.filter(p => p.id !== id);
+            saveProductsState();
+            showToast("Товар удален", "info");
+        }
+
+        // --- UTILS: TOAST NOTIFICATIONS ---
+        function showToast(msg, type = 'info') {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastMsg.innerText = msg;
+            if (type === 'success') toastIcon.className = "fa-solid fa-circle-check text-green-400";
+            else if (type === 'error') toastIcon.className = "fa-solid fa-circle-exclamation text-red-400";
+            else toastIcon.className = "fa-solid fa-circle-info text-blue-400";
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
